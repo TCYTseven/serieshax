@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Modal, ModalContent, ModalHeader, ModalBody, useDisclosure } from "@heroui/modal";
 import { OnboardingData } from "@/contexts/OnboardingContext";
+import ProfileMenu from "./ProfileMenu";
 
 interface EventResultsProps {
   searchQuery: string;
@@ -444,7 +445,12 @@ export default function EventResults({
   const visibleEvents = getVisibleEvents();
 
   return (
-    <div className="min-h-screen bg-black px-6 py-12">
+    <div className="min-h-screen bg-black px-6 py-12 relative">
+      {/* Profile Menu - Top Left */}
+      <div className="absolute top-6 left-6 z-50">
+        <ProfileMenu />
+      </div>
+
       <div className="max-w-7xl mx-auto space-y-16">
         {/* Header */}
         <motion.div

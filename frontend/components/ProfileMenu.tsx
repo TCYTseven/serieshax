@@ -52,9 +52,19 @@ export default function ProfileMenu() {
     };
   }, [isOpen]);
 
+  const handleHome = () => {
+    setIsOpen(false);
+    router.push("/home");
+  };
+
   const handleSettings = () => {
     setIsOpen(false);
     router.push("/settings");
+  };
+
+  const handleReflections = () => {
+    setIsOpen(false);
+    router.push("/reflections");
   };
 
   const handleLogout = async () => {
@@ -83,9 +93,9 @@ export default function ProfileMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+        className="flex items-center justify-center w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-[#0084ff]/20 text-[#0084ff] flex items-center justify-center text-xs font-light">
+        <div className="w-12 h-12 rounded-full bg-[#0084ff]/20 text-[#0084ff] flex items-center justify-center text-base font-light">
           {getInitial()}
         </div>
       </button>
@@ -118,8 +128,22 @@ export default function ProfileMenu() {
                 </div>
 
                 <button
-                  onClick={handleSettings}
+                  onClick={handleHome}
                   className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide"
+                >
+                  Home
+                </button>
+
+                <button
+                  onClick={handleReflections}
+                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide border-t border-white/10"
+                >
+                  Reflections
+                </button>
+
+                <button
+                  onClick={handleSettings}
+                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide border-t border-white/10"
                 >
                   Settings
                 </button>
