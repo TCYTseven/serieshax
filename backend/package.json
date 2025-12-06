@@ -8,7 +8,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test:producer": "ts-node src/kafka/test-producer.ts",
-    "test:connection": "ts-node src/test-connection.ts"
+    "test:connection": "ts-node src/test-connection.ts",
+    "test:services": "ts-node src/test-services.ts",
+    "test:phase3": "ts-node src/test-phase3.ts",
+    "debug:consumer": "ts-node src/debug-consumer.ts",
+    "test:polymarket": "ts-node src/test-polymarket.ts"
   },
   "keywords": [
     "series",

@@ -1,6 +1,27 @@
 import { Producer, RecordMetadata } from 'kafkajs';
 import { kafka, kafkaConfig } from '../config/kafka';
-import { OutgoingMessage } from './types';
+
+/**
+ * Series API v2 Outgoing Message Format
+ */
+interface SeriesV2OutgoingMessage {
+  event_type: 'message.send';
+  data: {
+    to_phone: string;
+    text: string;
+  };
+}
+
+/**
+ * Legacy Outgoing Message Format
+ */
+interface LegacyOutgoingMessage {
+  event: 'send_message';
+  data: {
+    to: string;
+    body: string;
+  };
+}
 
 /**
  * Kafka Producer for sending SMS messages via Series
@@ -37,14 +58,24 @@ class SeriesProducer {
   }
 
   /**
-   * Send an SMS message to a user via Series
+   * Send an SMS message to a user via Series (tries both formats)
    */
   async sendMessage(to: string, body: string): Promise<RecordMetadata[]> {
     if (!this.isConnected) {
       await this.connect();
     }
 
-    const message: OutgoingMessage = {
+    // Try Series v2 format first
+    const messageV2: SeriesV2OutgoingMessage = {
+      event_type: 'message.send',
+      data: {
+        to_phone: to,
+        text: body,
+      },
+    };
+
+    // Also prepare legacy format as fallback
+    const messageLegacy: LegacyOutgoingMessage = {
       event: 'send_message',
       data: {
         to,
@@ -56,25 +87,47 @@ class SeriesProducer {
     console.log(`   Message: "${body}"`);
 
     try {
+      // Send using Series v2 format
       const result = await this.producer.send({
         topic: kafkaConfig.topic,
         messages: [
           {
-            key: to, // Use phone number as key for ordering
-            value: JSON.stringify(message),
+            key: to,
+            value: JSON.stringify(messageV2),
+            headers: {
+              'event-source': Buffer.from('social-oracle'),
+            },
           },
         ],
       });
 
-      console.log('✅ Message sent successfully!');
+      console.log('✅ Message sent successfully (v2 format)!');
       console.log(`   Topic: ${kafkaConfig.topic}`);
       console.log(`   Partition: ${result[0].partition}`);
       console.log(`   Offset: ${result[0].offset}`);
 
       return result;
     } catch (error) {
-      console.error('❌ Failed to send message:', error);
-      throw error;
+      console.error('❌ Failed to send message with v2 format, trying legacy...');
+      
+      // Try legacy format
+      try {
+        const result = await this.producer.send({
+          topic: kafkaConfig.topic,
+          messages: [
+            {
+              key: to,
+              value: JSON.stringify(messageLegacy),
+            },
+          ],
+        });
+
+        console.log('✅ Message sent successfully (legacy format)!');
+        return result;
+      } catch (legacyError) {
+        console.error('❌ Failed to send message:', legacyError);
+        throw legacyError;
+      }
     }
   }
 
