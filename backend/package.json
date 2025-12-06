@@ -1,0 +1,33 @@
+{
+  "name": "social-oracle-backend",
+  "version": "1.0.0",
+  "description": "Social Oracle backend for Series hackathon - Kafka-powered SMS processing",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test:producer": "ts-node src/kafka/test-producer.ts",
+    "test:connection": "ts-node src/test-connection.ts"
+  },
+  "keywords": [
+    "series",
+    "kafka",
+    "sms",
+    "social-oracle"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "kafkajs": "^2.2.4",
+    "openai": "^4.67.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
