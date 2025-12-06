@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase-client";
 import { motion } from "framer-motion";
-import ProfileMenu from "@/components/ProfileMenu";
 
 interface ProfileData {
   display_name: string | null;
@@ -108,11 +107,6 @@ export default function SettingsPage() {
             backgroundSize: "50px 50px",
           }}
         />
-      </div>
-
-      {/* Profile Menu - Top Left */}
-      <div className="absolute top-6 left-6 z-50">
-        <ProfileMenu />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-16">
