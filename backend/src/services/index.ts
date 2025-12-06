@@ -18,6 +18,9 @@ export * from './meetupService';
 // Opinion Service
 export * from './opinionService';
 
+// Reflection Service
+export * from './reflectionService';
+
 // Vibe Service
 export * from './vibeService';
 
@@ -52,6 +55,8 @@ export type {
   CreateMeetupInput,
   MicroOpinion,
   CreateOpinionInput,
+  Reflection,
+  CreateReflectionInput,
   CityVibe,
   HangoutReview,
   UserIntent,

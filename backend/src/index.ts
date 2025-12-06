@@ -1,8 +1,8 @@
 import { seriesConsumer } from './kafka/consumer';
 import { kafkaConfig } from './config/kafka';
 import { isSupabaseConfigured } from './config/supabase';
-import {
-  getOrCreateUser,
+import { 
+  getOrCreateUser, 
   getUserProfile,
   getOrCreateConversation,
   addMessage,
@@ -20,6 +20,7 @@ import {
   recordRequest,
   getRateLimitMessage,
   getPolymarketContext,
+  replyToReflection,
 } from './services';
 import { 
   sendMessageToChat, 
@@ -152,10 +153,95 @@ async function generateMessageResponse(
 }
 
 /**
+ * Handle a reflection message - process reflection and send follow-up questions
+ * This can be triggered when a user sends a reflection (e.g., after a meetup)
+ */
+async function handleReflectionMessage(
+  phoneNumber: string,
+  reflectionText: string,
+  chatId?: string
+): Promise<void> {
+  console.log(`\n💭 Processing reflection from ${phoneNumber}`);
+  
+  try {
+    // Get or create user
+    const user = await getOrCreateUser(phoneNumber);
+    
+    // Process the reflection (saves raw reflection, generates follow-ups and analysis)
+    const result = await replyToReflection({
+      user_id: user.id,
+      raw_reflection: reflectionText,
+    });
+    
+    // Format follow-up questions for SMS (join with newlines, max 2 questions)
+    const followUpText = result.followUpQuestions
+      .slice(0, 2)
+      .join('\n\n');
+    
+    // Send follow-up questions via SMS
+    console.log(`\n📤 Sending follow-up questions to ${phoneNumber}`);
+    
+    if (chatId) {
+      const sendResult = await sendMessageToChat(chatId, followUpText);
+      if (sendResult.success) {
+        console.log(`   ✅ Follow-up questions sent to chat ${chatId}`);
+      } else {
+        console.error(`   ❌ Failed to send follow-up questions: ${sendResult.error}`);
+      }
+    } else {
+      const sendResult = await createChatAndSendMessage(
+        kafkaConfig.senderNumber,
+        phoneNumber,
+        followUpText
+      );
+      if (sendResult.success) {
+        console.log(`   ✅ Follow-up questions sent via new chat ${sendResult.chatId}`);
+      } else {
+        console.error(`   ❌ Failed to send follow-up questions: ${sendResult.error}`);
+      }
+    }
+    
+    console.log(`   📊 Analysis generated and saved (Reflection ID: ${result.reflection.id})`);
+    
+  } catch (error) {
+    console.error('   ❌ Error processing reflection:', error);
+    // Optionally send an error message to user
+    if (chatId) {
+      await sendMessageToChat(chatId, "Thanks for sharing! I'm processing your reflection...");
+    }
+  }
+}
+
+/**
+ * Detect if a message is a reflection
+ * Activates when message contains "to reflect" (e.g., "I'm ready to reflect about basketball hangout today" 
+ * or "I want to reflect about my night")
+ */
+function isReflectionMessage(messageBody: string): boolean {
+  const lower = messageBody.toLowerCase().trim();
+  
+  // Check if message contains "to reflect" anywhere in the text
+  // Examples that will match:
+  // - "I'm ready to reflect about basketball hangout today"
+  // - "I want to reflect about my night"
+  // - "to reflect on today's meetup"
+  // - "ready to reflect"
+  const containsToReflect = /\bto\s+reflect\b/i.test(lower);
+  
+  return containsToReflect;
+}
+
+/**
  * Handle incoming message - process and send response via REST API
  */
 async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<void> {
   const { from, body, messageId, chatId } = message;
+  
+  // Check if this is a reflection message
+  if (isReflectionMessage(body)) {
+    await handleReflectionMessage(from, body, chatId);
+    return;
+  }
   
   // Generate response
   const response = await generateMessageResponse(from, body, messageId);

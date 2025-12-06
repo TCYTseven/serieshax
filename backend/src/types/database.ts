@@ -196,6 +196,16 @@ export interface ConversationMessage {
   created_at: string;
 }
 
+export interface Reflection {
+  id: string;
+  user_id: string;
+  raw_reflection: string;
+  analysis: string | null;
+  follow_up_questions: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================================================
 // INPUT TYPES (for creating/updating)
 // ============================================================================
@@ -263,6 +273,11 @@ export interface CreateMessageInput {
   content: string;
   oracle_response?: Record<string, unknown> | null;
   kafka_events_emitted?: string[];
+}
+
+export interface CreateReflectionInput {
+  user_id: string;
+  raw_reflection: string;
 }
 
 // ============================================================================
