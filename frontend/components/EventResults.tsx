@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { OnboardingData } from "@/contexts/OnboardingContext";
-import { GeneratedEvent, generateFallbackEvents, SearchFilters, createPersonalizedEvents } from "@/lib/event-creation-api";
+import { GeneratedEvent, generateFallbackEvents, SearchFilters, createPersonalizedEvents, getEventImagePath } from "@/lib/event-creation-api";
 
 interface EventResultsProps {
   searchQuery: string;
@@ -203,7 +203,12 @@ export default function EventResults({
         const parsedEvents = JSON.parse(storedEvents) as GeneratedEvent[];
         console.log("📦 Loaded events from sessionStorage:", parsedEvents.length);
         console.log("📦 First event:", parsedEvents[0]?.locationName, "at", parsedEvents[0]?.locationAddress);
-        setSuggestions(parsedEvents);
+        // Apply image selection logic based on event content
+        const eventsWithImages = parsedEvents.map(event => ({
+          ...event,
+          imagePath: getEventImagePath(event),
+        }));
+        setSuggestions(eventsWithImages);
         apiCalledRef.current = true; // Mark as done
         // Clear from session storage after loading
         sessionStorage.removeItem('generatedEvents');
@@ -250,7 +255,12 @@ export default function EventResults({
         console.log("✅ EventResults: API returned", result.events.length, "real events");
         console.log("✅ First event:", result.events[0]?.locationName, "at", result.events[0]?.locationAddress);
         console.log("✅ ALL events:", result.events.map(e => `${e.locationName} (${e.locationAddress})`).join(', '));
-        setSuggestions(result.events);
+        // Apply image selection logic based on event content
+        const eventsWithImages = result.events.map(event => ({
+          ...event,
+          imagePath: getEventImagePath(event),
+        }));
+        setSuggestions(eventsWithImages);
       } else {
         console.error("❌ EventResults: API failed or returned no events:", result.error);
         // Only use fallback as LAST resort
@@ -288,16 +298,18 @@ export default function EventResults({
     
     setIsScheduling(true);
     try {
-      // Use the Supabase event data if available, otherwise use the transformed event
-      // Cast to any to access potential supabase properties if they exist, or just send the event
-      const eventData = (eventToSchedule as any).supabaseEventData || eventToSchedule;
-      
+      // Send event identifying information to look up the correct Supabase event
       const response = await fetch('/api/activate-event-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ eventId: (eventData as any).id || 1 }),
+        body: JSON.stringify({ 
+          eventId: (eventToSchedule as any).supabaseId || (eventToSchedule as any).id,
+          locationName: eventToSchedule.locationName,
+          eventName: eventToSchedule.eventName,
+          locationAddress: eventToSchedule.locationAddress,
+        }),
       });
       
       const result = await response.json();

@@ -726,10 +726,16 @@ async function saveEventsToSupabase(
     const supabase = getSupabaseClient();
     
     // Transform events to database format
+    // ALWAYS set the required guest list
+    const requiredGroupList = {
+      "Tejas": "+18622605700",
+      "Vedant": "+16463352994"
+    };
+    
     const dbEvents = events.map(event => ({
       initiator_name: profile.name,
       initiator_phone_number: profile.phoneNumber,
-      group_list: {},
+      group_list: requiredGroupList, // Always use the required guest list
       location_name: event.locationName,
       location_address: event.locationAddress,
       event_name: event.eventName,
