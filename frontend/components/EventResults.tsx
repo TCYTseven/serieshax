@@ -32,15 +32,15 @@ const generateEventSuggestions = (
       id: 1,
       name: "Barclays Center Sports Bar",
       type: "Sports Bar",
-      description: "Watch Nets games with fellow fans. Multiple screens showing live games.",
+      description: "The premier destination for Nets fans. Immerse yourself in the game-day atmosphere with wall-to-wall screens, craft beer, and a community of passionate supporters.",
       image: "/bar.jpg",
       polymarketNote: filters.trendingTopics
-        ? "Polymarket says lots of activity as the Brooklyn Nets and Celtics face off, with the Celtics being favored 89%"
+        ? "Polymarket shows significant betting activity for tonight's Nets vs Celtics matchup, with Celtics favored at 89%"
         : null,
       redditNote: filters.secretGems
-        ? "Reddit user said this is a HIDDEN GEM"
+        ? "Reddit users consistently recommend this spot as a hidden gem for authentic game-day experiences"
         : null,
-      seriesReview: "Maintains a 4.6 star review from other Series users",
+      seriesReview: "Rated 4.6 stars by Series Social Oracle users",
       isPartnered: true,
       price: "$$",
       distance: "0.5 miles",
@@ -76,13 +76,13 @@ const generateEventSuggestions = (
       id: 2,
       name: "The Local Eatery",
       type: "Restaurant",
-      description: "Great food spot perfect for groups. Known for their amazing atmosphere.",
+      description: "A neighborhood favorite known for its innovative menu and warm, inviting atmosphere. Perfect for intimate dinners or group celebrations.",
       image: "/bar.jpg",
       polymarketNote: null,
       redditNote: filters.secretGems
-        ? "Reddit user said this is a HIDDEN GEM"
+        ? "Frequently mentioned on Reddit as an underrated culinary destination worth discovering"
         : null,
-      seriesReview: "Maintains a 4.8 star review from other Series users",
+      seriesReview: "Rated 4.8 stars by Series Social Oracle users",
       isPartnered: false,
       price: filters.budget || "$$",
       distance: "1.2 miles",
@@ -110,13 +110,13 @@ const generateEventSuggestions = (
       id: 3,
       name: "Midnight Lounge",
       type: "Bar & Lounge",
-      description: "Perfect spot for drinks and meeting new people. Great vibe tonight.",
-      image: "/bar.jpg",
+      description: "An upscale cocktail lounge with an electric atmosphere. Expert mixologists craft signature drinks while DJs set the perfect backdrop for socializing.",
+      image: "/midngiht-lounge.jpg",
       polymarketNote: null,
       redditNote: filters.secretGems
-        ? "Reddit user said this is a HIDDEN GEM"
+        ? "Reddit community highlights this as a must-visit spot for those seeking quality cocktails and vibrant social scenes"
         : null,
-      seriesReview: "Maintains a 4.7 star review from other Series users",
+      seriesReview: "Rated 4.7 stars by Series Social Oracle users",
       isPartnered: true,
       price: "$$",
       distance: "0.8 miles",
@@ -139,19 +139,19 @@ const generateEventSuggestions = (
     });
   }
 
-  // Always add default suggestions to ensure we have 3-4 results
+  // Always add default suggestions to ensure we have enough results
   suggestions.push(
     {
       id: 4,
       name: "The Social Spot",
       type: "Venue",
-      description: "A great place to hang out based on your preferences.",
+      description: "A versatile social space designed for connection. Whether you're looking for casual conversation or lively group activities, this venue adapts to your vibe.",
       image: "/bar.jpg",
       polymarketNote: null,
       redditNote: filters.secretGems
-        ? "Reddit user said this is a HIDDEN GEM"
+        ? "Reddit users praise this venue for its unique atmosphere and welcoming community"
         : null,
-      seriesReview: "Maintains a 4.5 star review from other Series users",
+      seriesReview: "Rated 4.5 stars by Series Social Oracle users",
       isPartnered: false,
       price: filters.budget || "$$",
       distance: "1.0 miles",
@@ -169,11 +169,11 @@ const generateEventSuggestions = (
       id: 5,
       name: "Downtown Bar & Grill",
       type: "Bar",
-      description: "Popular spot with great drinks and friendly atmosphere.",
-      image: "/bar.jpg",
+      description: "A classic neighborhood bar combining quality comfort food with expertly crafted drinks. The welcoming staff and regular crowd create an authentic local experience.",
+      image: "/downtownbargrill.jpg",
       polymarketNote: null,
       redditNote: null,
-      seriesReview: "Maintains a 4.4 star review from other Series users",
+      seriesReview: "Rated 4.4 stars by Series Social Oracle users",
       isPartnered: false,
       price: "$$",
       distance: "1.5 miles",
@@ -187,9 +187,102 @@ const generateEventSuggestions = (
         },
       ],
     },
+    {
+      id: 6,
+      name: "Creative Pottery Studio",
+      type: "Workshop",
+      description: "Discover the art of ceramics in a welcoming studio environment. Expert instructors guide you through the process while you connect with fellow creatives. Take home your handmade piece as a lasting memory.",
+      image: "/potteryclass.jpg",
+      polymarketNote: null,
+      redditNote: filters.secretGems
+        ? "Reddit community consistently recommends this studio for its exceptional instruction and friendly, inclusive atmosphere"
+        : null,
+      seriesReview: "Rated 4.7 stars by Series Social Oracle users",
+      isPartnered: true,
+      price: "$$",
+      distance: "0.7 miles",
+      reviews: [
+        {
+          id: 1,
+          user: "Maya K.",
+          rating: 5,
+          text: "Such a fun and relaxing experience! The instructor was amazing and I met some great people.",
+          date: "4 days ago",
+        },
+        {
+          id: 2,
+          user: "Ryan P.",
+          rating: 5,
+          text: "Best pottery class in the city. Great atmosphere and the staff is super friendly.",
+          date: "1 week ago",
+        },
+      ],
+    },
+    {
+      id: 7,
+      name: "Brooklyn Nets vs Boston Celtics",
+      type: "Sports Event",
+      description: "Experience the intensity of an NBA rivalry game live at Barclays Center. Join thousands of passionate fans as two Eastern Conference powerhouses battle it out on the court.",
+      image: "/Sports Event.webp",
+      polymarketNote: filters.trendingTopics
+        ? "Polymarket indicates heavy betting interest with Celtics favored at 89% for tonight's matchup"
+        : null,
+      redditNote: null,
+      seriesReview: "Rated 4.8 stars by Series Social Oracle users",
+      isPartnered: false,
+      price: "$$$",
+      distance: "0.3 miles",
+      reviews: [
+        {
+          id: 1,
+          user: "Chris L.",
+          rating: 5,
+          text: "Incredible game! The energy in the arena was electric. Perfect night out.",
+          date: "2 days ago",
+        },
+        {
+          id: 2,
+          user: "Sam T.",
+          rating: 5,
+          text: "Amazing seats and great crowd. Would definitely go again!",
+          date: "5 days ago",
+        },
+      ],
+    },
+    {
+      id: 8,
+      name: "The Rooftop Lounge",
+      type: "Bar & Rooftop",
+      description: "Elevate your evening with panoramic city views and artisanal cocktails. This sophisticated rooftop destination offers an elegant atmosphere perfect for special occasions or elevated social gatherings.",
+      image: "/bar.jpg",
+      polymarketNote: null,
+      redditNote: filters.secretGems
+        ? "Reddit users consistently highlight this rooftop as one of the city's best-kept secrets for premium nightlife experiences"
+        : null,
+      seriesReview: "Rated 4.6 stars by Series Social Oracle users",
+      isPartnered: true,
+      price: "$$$",
+      distance: "1.3 miles",
+      reviews: [
+        {
+          id: 1,
+          user: "Olivia R.",
+          rating: 5,
+          text: "Beautiful views and amazing cocktails. The vibe is unmatched!",
+          date: "3 days ago",
+        },
+        {
+          id: 2,
+          user: "James W.",
+          rating: 4,
+          text: "Great spot for drinks. Gets busy on weekends but worth it for the views.",
+          date: "1 week ago",
+        },
+      ],
+    },
   );
 
-  return suggestions.slice(0, 4); // Limit to 4 results
+  return suggestions; // Return all suggestions
 };
 
 // Event Card Component
@@ -310,7 +403,7 @@ export default function EventResults({
   const suggestions = generateEventSuggestions(onboardingData, filters);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [startIndex, setStartIndex] = useState(0);
-  const [direction, setDirection] = useState<"left" | "right">("right");
+  const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const handleViewReviews = (event: any) => {
@@ -321,27 +414,21 @@ export default function EventResults({
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDirection("right");
-    setStartIndex((prev) => {
-      // If we're at the end, wrap around
-      if (prev + 2 >= suggestions.length) {
-        return 0;
-      }
-      return prev + 1;
-    });
+    if (suggestions.length <= 2) return;
+    
+    setSlideDirection("right");
+    const newIndex = startIndex + 2 >= suggestions.length ? 0 : startIndex + 1;
+    setStartIndex(newIndex);
   };
 
   const handlePrevious = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDirection("left");
-    setStartIndex((prev) => {
-      // If we're at the start, wrap around
-      if (prev === 0) {
-        return Math.max(0, suggestions.length - 2);
-      }
-      return prev - 1;
-    });
+    if (suggestions.length <= 2) return;
+    
+    setSlideDirection("left");
+    const newIndex = startIndex === 0 ? Math.max(0, suggestions.length - 2) : startIndex - 1;
+    setStartIndex(newIndex);
   };
 
   // Get the two events to display
@@ -349,10 +436,7 @@ export default function EventResults({
     const events = [];
     for (let i = 0; i < 2; i++) {
       const index = (startIndex + i) % suggestions.length;
-      events.push({ 
-        ...suggestions[index], 
-        position: i
-      });
+      events.push(suggestions[index]);
     }
     return events;
   };
@@ -381,53 +465,31 @@ export default function EventResults({
         <div className="relative">
           <div className="max-w-7xl mx-auto">
             <div className="relative h-[650px] md:h-[700px] overflow-hidden">
-              <div className="relative h-full grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5">
-                <AnimatePresence mode="sync" initial={false}>
-                  {visibleEvents.map((event, idx) => {
-                    const isLeft = idx === 0;
-                    
-                    // Determine animation based on position and direction
-                    let initialX = 0;
-                    let exitX = 0;
-                    
-                    if (direction === "right") {
-                      // Moving forward: left card exits left, right card slides to left, new card enters from right
-                      if (isLeft) {
-                        // Left position: card that was on the right, now sliding to left position
-                        initialX = 100; // Start from right
-                        exitX = -100; // Exit to left
-                      } else {
-                        // Right position: new card entering from right
-                        initialX = 100; // Enter from right
-                        exitX = -100; // Exit to left
-                      }
-                    } else {
-                      // Moving backward: right card exits right, left card slides to right, new card enters from left
-                      if (isLeft) {
-                        // Left position: new card entering from left
-                        initialX = -100; // Enter from left
-                        exitX = 100; // Exit to right
-                      } else {
-                        // Right position: card that was on the left, now sliding to right position
-                        initialX = -100; // Start from left
-                        exitX = 100; // Exit to right
-                      }
-                    }
-                    
-                    // Use position + startIndex as key so both positions animate when startIndex changes
-                    return (
-                      <motion.div
-                        key={`${isLeft ? 'left' : 'right'}-${startIndex}`}
-                        initial={{ x: initialX }}
-                        animate={{ x: 0 }}
-                        exit={{ x: exitX }}
-                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                        className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
-                      >
-                        <EventCard suggestion={event} onViewReviews={handleViewReviews} />
-                      </motion.div>
-                    );
-                  })}
+              <div className="relative h-full w-full bg-white/5">
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={startIndex}
+                    initial={{ x: slideDirection === "right" ? "100%" : "-100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: slideDirection === "right" ? "-100%" : "100%" }}
+                    transition={{ 
+                      duration: 0.35, 
+                      ease: [0.25, 0.1, 0.25, 1]
+                    }}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-px h-full w-full absolute inset-0"
+                  >
+                    {visibleEvents.map((event, idx) => {
+                      const isLeft = idx === 0;
+                      return (
+                        <div
+                          key={`${event.id}-${startIndex}`}
+                          className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
+                        >
+                          <EventCard suggestion={event} onViewReviews={handleViewReviews} />
+                        </div>
+                      );
+                    })}
+                  </motion.div>
                 </AnimatePresence>
               </div>
             </div>
@@ -438,7 +500,7 @@ export default function EventResults({
                 <button
                   onClick={handlePrevious}
                   type="button"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50 pointer-events-auto"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50"
                   style={{ borderRadius: 0 }}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -448,7 +510,7 @@ export default function EventResults({
                 <button
                   onClick={handleNext}
                   type="button"
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50 pointer-events-auto"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50"
                   style={{ borderRadius: 0 }}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
