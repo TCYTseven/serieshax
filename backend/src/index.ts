@@ -1,6 +1,6 @@
 import { seriesConsumer } from './kafka/consumer';
 import { kafkaConfig } from './config/kafka';
-import { isSupabaseConfigured } from './config/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from './config/supabase';
 import {
   getOrCreateUser,
   getUserProfile,
@@ -85,61 +85,20 @@ async function generateMessageResponse(
     // Get or create conversation
     const conversation = await getOrCreateConversation(user.id, messageId);
     console.log(`   💬 Conversation: ${conversation.id}`);
-
-    // Save user message
-    await addMessage(conversation.id, 'user', messageBody);
-
-    // Get conversation history for context
-    const history = await getConversationHistory(conversation.id, 10);
+    console.log(`   💬 Context data:`, JSON.stringify(conversation.context_data));
 
     // Check if we're waiting for a reflection response
+    // IMPORTANT: Check this FIRST before saving message or any other processing
     const waitingForReflection = conversation.context_data?.waiting_for_reflection === true;
-    
-    // If we're waiting for reflection, process it
-    if (waitingForReflection) {
-      console.log('   📝 Processing reflection response...');
-      
-      // Generate analysis for the reflection
-      const { analysis, followUpQuestions } = await generateReflectionAnalysis(messageBody, history);
-      
-      // Store the reflection in Supabase
-      const reflection = await createReflection({
-        user_id: user.id,
-        raw_reflection: messageBody, // Store raw, unmodified text
-        analysis: analysis,
-        follow_up_questions: followUpQuestions,
-      });
-      
-      console.log(`   ✅ Reflection stored with ID: ${reflection.id}`);
-      
-      // Clear the waiting flag
-      await updateConversationContext(conversation.id, {
-        waiting_for_reflection: false,
-      });
-      
-      // Build response with analysis
-      let response = `Thank you for sharing your reflection. Here's what I noticed:\n\n${analysis}`;
-      
-      if (followUpQuestions.length > 0) {
-        response += '\n\nSome questions to consider:\n';
-        followUpQuestions.forEach((q, idx) => {
-          response += `${idx + 1}. ${q}\n`;
-        });
-      }
-      
-      // Save assistant response
-      await addMessage(conversation.id, 'assistant', response, {
-        intent: 'reflection',
-        reflection_id: reflection.id,
-      });
-      
-      console.log(`   ✅ Reflection analysis sent`);
-      return response;
-    }
+    console.log(`   💬 Waiting for reflection: ${waitingForReflection}`);
 
-    // Check if this is a reflection request
-    if (isReflectionRequest(messageBody)) {
-      console.log('   📝 Reflection request detected');
+    // Check if this is a reflection request FIRST (before saving message)
+    // This should NOT be saved as a reflection - just set the flag
+    if (!waitingForReflection && isReflectionRequest(messageBody)) {
+      console.log('   📝 Reflection request detected - SETTING FLAG (NOT SAVING)');
+      
+      // Save user message (just for conversation history)
+      await addMessage(conversation.id, 'user', messageBody);
       
       // Set flag in conversation context
       await updateConversationContext(conversation.id, {
@@ -154,8 +113,70 @@ async function generateMessageResponse(
         intent: 'reflection_request',
       });
       
-      console.log(`   ✅ Reflection prompt sent`);
-      return response;
+      console.log(`   ✅ Reflection prompt sent - waiting for actual reflection`);
+      return response; // RETURN - don't save this as a reflection!
+    }
+
+    // Save user message
+    await addMessage(conversation.id, 'user', messageBody);
+
+    // Get conversation history for context
+    const history = await getConversationHistory(conversation.id, 10);
+    
+    // If we're waiting for reflection, IMMEDIATELY store it and return
+    // This is the SECOND message (the actual reflection) - SAVE THIS ONE
+    if (waitingForReflection) {
+      console.log('   📝 Processing reflection response - STORING IMMEDIATELY...');
+      console.log(`   📝 Message length: ${messageBody.length} characters`);
+      
+      // Store the reflection in Supabase IMMEDIATELY (just the raw text, no analysis)
+      const reflection = await createReflection({
+        user_id: user.id,
+        raw_reflection: messageBody, // Store raw, unmodified text
+        // No analysis - save instantly
+      });
+      
+      console.log(`   ✅ Reflection stored with ID: ${reflection.id} (raw text only)`);
+      
+      // Generate analysis in background (don't wait for it)
+      generateReflectionAnalysis(messageBody, history)
+        .then(async ({ analysis, followUpQuestions }) => {
+          // Update reflection with analysis asynchronously
+          const supabase = getSupabaseClient();
+          const { error } = await supabase
+            .from('reflections')
+            .update({ 
+              analysis: analysis,
+              follow_up_questions: followUpQuestions 
+            })
+            .eq('id', reflection.id);
+          
+          if (error) {
+            console.error(`   ⚠️ Failed to add analysis:`, error);
+          } else {
+            console.log(`   ✅ Analysis added to reflection ${reflection.id}`);
+          }
+        })
+        .catch((err: any) => {
+          console.error(`   ⚠️ Failed to generate analysis:`, err);
+        });
+      
+      // Clear the waiting flag IMMEDIATELY
+      await updateConversationContext(conversation.id, {
+        waiting_for_reflection: false,
+      });
+      
+      // Simple acknowledgment - NO follow-up questions, NO analysis in SMS
+      const response = `Thanks for sharing! I've saved your reflection. You can view it anytime on your Reflections page. 💭`;
+      
+      // Save assistant response
+      await addMessage(conversation.id, 'assistant', response, {
+        intent: 'reflection',
+        reflection_id: reflection.id,
+      });
+      
+      console.log(`   ✅ Reflection stored and acknowledged - NO FOLLOW-UPS`);
+      return response; // RETURN IMMEDIATELY - don't process further
     }
 
     // Detect intent
