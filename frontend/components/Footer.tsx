@@ -85,8 +85,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/business-partner" className="text-white/40 hover:text-white/70 text-sm transition-colors">
-                  Get Started
+                <Link href="/dashboard" className="text-white/40 hover:text-white/70 text-sm transition-colors">
+                  Dashboard
                 </Link>
               </li>
             </ul>
