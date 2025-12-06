@@ -381,8 +381,29 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewRevie
             </button>
           </div>
           <button
-            onClick={() => {
-              console.log("Activating Event Agent for:", suggestion.name);
+            onClick={async () => {
+              try {
+                console.log("Activating Event Agent for:", suggestion.name);
+                const response = await fetch('/api/activate-event-agent', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  console.log('Event agent activated successfully!');
+                  // You could add a toast notification here
+                } else {
+                  console.error('Failed to activate event agent:', result.error);
+                  alert(`Failed to activate event agent: ${result.error}`);
+                }
+              } catch (error) {
+                console.error('Error activating event agent:', error);
+                alert('An error occurred while activating the event agent');
+              }
             }}
             className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
             style={{ borderRadius: 0 }}
