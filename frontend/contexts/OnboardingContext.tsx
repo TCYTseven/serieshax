@@ -11,6 +11,8 @@ export interface OnboardingData {
   sportsTeams: Record<string, string>; // sport -> team name
   foodGenres: string[]; // food genres
   musicGenres: string[]; // music genres
+  socialbility: number; // 1-10 rating
+  vibeTags: string[]; // vibe tags like "outgoing", "introverted", etc.
 }
 
 interface OnboardingContextType {
@@ -30,6 +32,8 @@ const defaultData: OnboardingData = {
   sportsTeams: {},
   foodGenres: [],
   musicGenres: [],
+  socialbility: 5, // Default to middle
+  vibeTags: [],
 };
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(

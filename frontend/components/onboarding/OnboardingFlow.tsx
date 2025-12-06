@@ -7,9 +7,10 @@ import { Button } from "@heroui/button";
 import Step1PersonalInfo from "./Step1PersonalInfo";
 import Step2Interests from "./Step2Interests";
 import Step3Goals from "./Step3Goals";
+import Step4SocialVibe from "./Step4SocialVibe";
 import CompletionScreen from "./CompletionScreen";
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 const SWIPE_THRESHOLD = 50;
 
 export default function OnboardingFlow() {
@@ -127,6 +128,9 @@ export default function OnboardingFlow() {
             )}
             {currentStep === 3 && (
               <Step3Goals onNext={handleNext} onSkip={handleSkip} />
+            )}
+            {currentStep === 4 && (
+              <Step4SocialVibe onNext={handleNext} onSkip={handleSkip} />
             )}
           </motion.div>
         </AnimatePresence>
