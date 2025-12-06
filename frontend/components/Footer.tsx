@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 export default function Footer() {
   return (
     <footer className="border-t border-white/5 bg-black/50 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-3">
@@ -94,7 +94,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="mt-6 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/30 text-xs">
             © {new Date().getFullYear()} Social Oracle. All rights reserved.
           </p>

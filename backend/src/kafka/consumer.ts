@@ -23,12 +23,12 @@ class SeriesConsumer {
   private messageHandler: MessageHandler | null = null;
 
   constructor() {
-    // Use a unique consumer group to avoid partition conflicts with other consumers
-    const uniqueGroupId = `${kafkaConfig.consumerGroup}-${Date.now()}`;
-    console.log(`📡 Using consumer group: ${uniqueGroupId}`);
+    // Use the configured consumer group to maintain offset position
+    // This ensures we only process new messages, not backlogged ones
+    console.log(`📡 Using consumer group: ${kafkaConfig.consumerGroup}`);
     
     this.consumer = kafka.consumer({ 
-      groupId: uniqueGroupId,
+      groupId: kafkaConfig.consumerGroup,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
     });
@@ -46,7 +46,7 @@ class SeriesConsumer {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.warn('⚠️ Consumer is already running');
+      console.warn('⚠️ Coimage.pngnsumer is already running');
       return;
     }
 
@@ -58,9 +58,9 @@ class SeriesConsumer {
       console.log(`📥 Subscribing to topic: ${kafkaConfig.topic}`);
       await this.consumer.subscribe({ 
         topic: kafkaConfig.topic, 
-        fromBeginning: false  // Only process new messages, skip historical
+        fromBeginning: false  // Only process new messages, not backlogged ones
       });
-      console.log('✅ Subscribed to topic (fromBeginning: false - new messages only)');
+      console.log('✅ Subscribed to topic (fromBeginning: false - only new messages)');
 
       this.isRunning = true;
 

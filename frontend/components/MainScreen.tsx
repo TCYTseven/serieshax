@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Switch } from "@heroui/switch";
 import EventLoading from "./EventLoading";
-import ProfileMenu from "./ProfileMenu";
 
 const actionButtons = [
   {
@@ -87,11 +86,6 @@ export default function MainScreen() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
-      {/* Profile Menu - Top Left */}
-      <div className="absolute top-6 left-6 z-50">
-        <ProfileMenu />
-      </div>
-
       {/* Subtle background accents */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl" />

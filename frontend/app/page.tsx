@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/button";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -50,13 +51,31 @@ export default function LandingPage() {
           transition={{ type: "spring", stiffness: 50, damping: 20 }}
         />
 
-        {/* Subtle Grid Pattern */}
+        {/* Enhanced Grid Pattern */}
         <div
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.2) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.2) 1px, transparent 1px)`,
             backgroundSize: '60px 60px',
+          }}
+        />
+        
+        {/* Animated Grid Lines */}
+        <motion.div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.3) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.3) 1px, transparent 1px)`,
+            backgroundSize: '120px 120px',
+          }}
+          animate={{
+            backgroundPosition: ['0px 0px', '120px 120px'],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'linear',
           }}
         />
 
@@ -212,63 +231,180 @@ export default function LandingPage() {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="text-center"
         >
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-8 flex justify-center"
+          >
+            <div className="relative w-24 h-24 md:w-32 md:h-32">
+              <motion.div
+                className="absolute inset-0 bg-[#0084ff]/20 rounded-full blur-xl"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <div className="relative w-full h-full">
+                <Image
+                  src="/solace.png"
+                  alt="Social Oracle Logo"
+                  fill
+                  className="object-contain drop-shadow-[0_0_20px_rgba(0,132,255,0.5)]"
+                  priority
+                />
+              </div>
+            </div>
+          </motion.div>
+
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="text-5xl md:text-7xl font-light text-white leading-[1.05] tracking-tight mb-8"
+            className="text-5xl md:text-7xl font-light text-white leading-[1.05] tracking-tight mb-8 relative"
           >
-            Social Oracle
+            <span className="relative z-10 bg-gradient-to-r from-white via-white to-white/80 bg-clip-text text-transparent">
+              Social Oracle
+            </span>
+            <motion.div
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-[#0084ff] to-transparent"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            />
           </motion.h1>
 
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xl md:text-2xl text-white/50 font-light leading-relaxed mb-12 max-w-3xl mx-auto"
+            className="mb-12 max-w-3xl mx-auto"
           >
-            Social Oracle is the agentic layer that transforms how people socialize by driving social discovery through the city's hidden gems.
-          </motion.p>
+            <p className="text-xl md:text-2xl text-white/60 font-light leading-relaxed relative z-10">
+              <span className="bg-gradient-to-r from-white/80 via-white/60 to-white/40 bg-clip-text text-transparent">
+                Social Oracle is the agentic layer that transforms how people socialize by driving social discovery through the city's hidden gems.
+              </span>
+            </p>
+            {/* Decorative underline */}
+            <motion.div
+              className="mt-4 h-px bg-gradient-to-r from-transparent via-[#0084ff]/30 to-transparent"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.6, duration: 1 }}
+            />
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
           >
+            {/* Button glow effect */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="absolute inset-0 bg-[#0084ff]/30 blur-2xl rounded-full"
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.3, 0.5, 0.3],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative z-10"
             >
               <Button
                 onClick={handleContinue}
-                className="bg-[#0084ff] text-white hover:bg-[#00a0ff] font-light px-12 py-6 text-sm uppercase tracking-wider relative overflow-hidden group"
+                className="bg-gradient-to-r from-[#0084ff] to-[#0066cc] text-white hover:from-[#00a0ff] hover:to-[#0084ff] font-light px-12 py-6 text-sm uppercase tracking-wider relative overflow-hidden group border border-[#0084ff]/50 shadow-[0_0_30px_rgba(0,132,255,0.3)]"
                 size="lg"
                 radius="none"
               >
                 <motion.span
-                  className="relative z-10"
+                  className="relative z-10 flex items-center gap-2"
                   initial={{ opacity: 1 }}
                   whileHover={{ opacity: 1 }}
                 >
                   Continue
+                  <motion.svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="relative z-10"
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 4 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </motion.svg>
                 </motion.span>
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-[#0084ff] via-[#00a0ff] to-[#0084ff] opacity-0 group-hover:opacity-100"
+                  className="absolute inset-0 bg-gradient-to-r from-[#00a0ff] via-[#0084ff] to-[#00a0ff] opacity-0 group-hover:opacity-100"
                   initial={{ x: "-100%" }}
                   whileHover={{ x: "100%" }}
                   transition={{ duration: 0.6, ease: "easeInOut" }}
+                />
+                {/* Shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "200%" }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatDelay: 1,
+                    ease: "linear",
+                  }}
                 />
               </Button>
             </motion.div>
           </motion.div>
 
-          {/* Subtle Accent Line */}
+          {/* Decorative Elements */}
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ delay: 0.5, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="w-24 h-px bg-[#0084ff] mx-auto mt-16"
-          />
+            className="mt-16 flex flex-col items-center gap-4"
+          >
+            <div className="w-24 h-px bg-gradient-to-r from-transparent via-[#0084ff] to-transparent" />
+            <motion.div
+              className="flex gap-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+            >
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-[#0084ff]/40"
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    opacity: [0.4, 0.8, 0.4],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    delay: i * 0.2,
+                    ease: "easeInOut",
+                  }}
+                />
+              ))}
+            </motion.div>
+          </motion.div>
         </motion.div>
       </div>
     </div>

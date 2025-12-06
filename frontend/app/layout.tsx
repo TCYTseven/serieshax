@@ -5,6 +5,7 @@ import clsx from "clsx";
 
 import { Providers } from "./providers";
 import Footer from "@/components/Footer";
+import GlobalProfileMenu from "@/components/GlobalProfileMenu";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -43,6 +44,7 @@ export default function RootLayout({
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
           <div className="flex flex-col min-h-screen">
+            <GlobalProfileMenu />
             <main className="flex-1">
               {children}
             </main>

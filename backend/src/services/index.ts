@@ -50,22 +50,8 @@ export {
 // Rate Limiter
 export * from './rateLimiter';
 
-// Event Creation Agent
-export {
-  createPersonalizedEvents,
-  analyzeUserProfile,
-  fetchPolymarketData,
-  fetchRedditData,
-  generateEventSuggestions,
-  saveEventsToSupabase,
-  type OnboardingProfile,
-  type SearchFilters,
-  type GeneratedEvent,
-  type EventCreationResult,
-  type PersonalityAnalysis,
-  type PolymarketNote,
-  type RedditNote,
-} from './eventCreationAgent';
+// Reflection Service
+export * from './reflectionService';
 
 // Re-export types for convenience
 export type {

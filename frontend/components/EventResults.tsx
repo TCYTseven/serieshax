@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Modal, ModalContent, ModalHeader, ModalBody, useDisclosure } from "@heroui/modal";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/modal";
+import { Button } from "@heroui/button";
 import { OnboardingData } from "@/contexts/OnboardingContext";
 import { GeneratedEvent, generateFallbackEvents, SearchFilters, createPersonalizedEvents } from "@/lib/event-creation-api";
 
@@ -22,9 +23,9 @@ interface EventResultsProps {
 // Event Card Component
 const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; onViewReviews: (event: GeneratedEvent) => void }) => {
   return (
-    <div className="bg-black border border-white/10 p-8 md:p-10 h-full flex flex-col">
+    <div className="bg-black border border-white/10 p-6 md:p-8 h-full flex flex-col">
       {/* Image */}
-      <div className="relative h-48 md:h-56 w-full mb-6">
+      <div className="relative h-36 md:h-40 w-full mb-4">
         <Image
           src={suggestion.imagePath || '/bar.jpg'}
           alt={suggestion.locationName}
@@ -52,7 +53,7 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; 
       </div>
 
       {/* Content */}
-      <div className="space-y-4 flex-1 flex flex-col">
+      <div className="space-y-3 flex-1 flex flex-col">
         <div>
           <h3 className="text-xl md:text-2xl font-light text-white mb-1 tracking-tight">
             {suggestion.locationName}
@@ -64,7 +65,7 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; 
 
         {/* Description */}
         <div>
-          <p className="text-white/60 text-sm font-light leading-relaxed">
+          <p className="text-white/60 text-xs font-light leading-relaxed line-clamp-2">
             {suggestion.description}
           </p>
         </div>
@@ -131,14 +132,14 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; 
         )}
 
         {/* Footer Actions */}
-        <div className="space-y-3 pt-3 border-t border-white/10 mt-auto">
+        <div className="space-y-2 pt-2 border-t border-white/10 mt-auto">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs font-light">
               {suggestion.estimatedDistance} away
             </span>
             <button
               onClick={() => onViewReviews(suggestion)}
-              className="px-4 py-1.5 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-colors text-xs font-light uppercase tracking-wider"
+              className="px-3 py-1 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-colors text-xs font-light uppercase tracking-wider"
               style={{ borderRadius: 0 }}
             >
               View Reviews
@@ -264,6 +265,48 @@ export default function EventResults({
     onOpen();
   };
 
+  const handleActivateEvent = (event: any) => {
+    setEventToSchedule(event);
+    onScheduleOpen();
+  };
+
+  const handleScheduleEvent = async () => {
+    if (!eventToSchedule) return;
+    
+    setIsScheduling(true);
+    try {
+      // Use the Supabase event data if available, otherwise use the transformed event
+      const eventData = eventToSchedule.supabaseEventData || eventToSchedule;
+      
+      const response = await fetch('/api/activate-event-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ eventId: eventData.id || 1 }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setNotification({ type: 'success', message: 'Event scheduled successfully! Group chat created.' });
+        onScheduleClose();
+        setEventToSchedule(null);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setNotification(null), 3000);
+      } else {
+        setNotification({ type: 'error', message: result.error || 'Failed to schedule event' });
+        setTimeout(() => setNotification(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error scheduling event:', error);
+      setNotification({ type: 'error', message: 'An error occurred while scheduling the event' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -317,20 +360,78 @@ export default function EventResults({
   }
 
   return (
-    <div className="min-h-screen bg-black px-6 py-12">
-      <div className="max-w-7xl mx-auto space-y-16">
+    <div className="min-h-screen bg-black relative overflow-hidden px-6 py-6">
+      {/* Background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Gradient orbs */}
+        <motion.div
+          className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.4, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0084ff]/2 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.3, 0.2],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2,
+          }}
+        />
+        
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
+          className="space-y-2"
         >
-          <div className="w-12 h-px bg-[#0084ff] mb-4" />
-          <h1 className="text-5xl md:text-6xl font-light text-white leading-[1.05] tracking-tight">
+          <div className="w-12 h-px bg-[#0084ff] mb-2" />
+          <h1 className="text-4xl md:text-5xl font-light text-white leading-[1.05] tracking-tight">
             Event Created
           </h1>
+<<<<<<< backend-kafka-setup
           <p className="text-white/40 text-lg font-light">
             Here are {suggestions.length} perfect spots curated just for you
+=======
+          <p className="text-white/40 text-base font-light">
+            Here are some perfect spots for your night out
+>>>>>>> main
           </p>
           
           {/* Active Filters Indicator */}
@@ -365,7 +466,11 @@ export default function EventResults({
         {/* Event Cards with Navigation */}
         <div className="relative">
           <div className="max-w-7xl mx-auto">
+<<<<<<< backend-kafka-setup
             <div className="relative h-[700px] md:h-[750px] overflow-hidden">
+=======
+            <div className="relative h-[560px] md:h-[600px] overflow-hidden">
+>>>>>>> main
               <div className="relative h-full w-full bg-white/5">
                 <AnimatePresence initial={false}>
                   <motion.div
@@ -379,14 +484,14 @@ export default function EventResults({
                     }}
                     className="grid grid-cols-1 md:grid-cols-2 gap-px h-full w-full absolute inset-0"
                   >
-                    {visibleEvents.map((event, idx) => {
+                    {visibleEvents.filter(Boolean).map((event, idx) => {
                       const isLeft = idx === 0;
                       return (
                         <div
-                          key={`${event.id}-${startIndex}`}
+                          key={`${event?.id || idx}-${startIndex}`}
                           className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
                         >
-                          <EventCard suggestion={event} onViewReviews={handleViewReviews} />
+                          <EventCard suggestion={event} onViewReviews={handleViewReviews} onActivateEvent={handleActivateEvent} />
                         </div>
                       );
                     })}
@@ -556,6 +661,134 @@ export default function EventResults({
           )}
         </ModalContent>
       </Modal>
+
+      {/* Schedule Confirmation Modal */}
+      <Modal
+        isOpen={isScheduleOpen}
+        onClose={onScheduleClose}
+        placement="center"
+        size="2xl"
+        classNames={{
+          base: "bg-black border border-white/10",
+          header: "border-b border-white/10",
+          body: "py-6",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 text-white">
+                <div className="w-12 h-px bg-[#0084ff] mb-2" />
+                <h3 className="text-2xl font-light tracking-tight">Schedule Event</h3>
+                <p className="text-white/40 text-sm font-light">
+                  Review event details before scheduling
+                </p>
+              </ModalHeader>
+              <ModalBody>
+                {eventToSchedule && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-white text-lg font-light mb-2">{eventToSchedule.name}</h4>
+                      <p className="text-white/60 text-sm font-light">{eventToSchedule.description}</p>
+                    </div>
+                    
+                    <div className="space-y-2 pt-3 border-t border-white/10">
+                      {eventToSchedule.organizer && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Organizer:</span> {eventToSchedule.organizer}
+                        </div>
+                      )}
+                      {eventToSchedule.location && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Location:</span> {eventToSchedule.location}
+                        </div>
+                      )}
+                      {eventToSchedule.participants && eventToSchedule.participants.length > 0 && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Participants:</span> {eventToSchedule.participants.join(', ')}
+                        </div>
+                      )}
+                      {eventToSchedule.attendees && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Attendees:</span> {eventToSchedule.attendees}
+                        </div>
+                      )}
+                    </div>
+
+                    {eventToSchedule.notes && (
+                      <div className="pt-3 border-t border-white/10">
+                        <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Notes</p>
+                        <p className="text-white/60 text-sm font-light">{eventToSchedule.notes}</p>
+                      </div>
+                    )}
+
+                    {eventToSchedule.vibes && (
+                      <div className="pt-3 border-t border-white/10">
+                        <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Vibes</p>
+                        <p className="text-white/60 text-sm font-light">{eventToSchedule.vibes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  onClick={onClose}
+                  className="px-6 py-2 border border-white/20 text-white/60 hover:bg-white/5 transition-all text-xs font-light uppercase tracking-wider"
+                  style={{ borderRadius: 0 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleScheduleEvent}
+                  isLoading={isScheduling}
+                  className="px-6 py-2 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-all text-xs font-light uppercase tracking-wider"
+                  style={{ borderRadius: 0 }}
+                >
+                  Schedule Now
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]"
+          >
+            <div
+              className={`px-6 py-4 rounded-none border ${
+                notification.type === 'success'
+                  ? 'bg-black border-[#0084ff] text-white'
+                  : 'bg-black border-red-500 text-white'
+              } shadow-lg min-w-[300px] max-w-md`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-1 h-full ${notification.type === 'success' ? 'bg-[#0084ff]' : 'bg-red-500'}`} />
+                <div className="flex-1">
+                  <p className="text-sm font-light">{notification.message}</p>
+                </div>
+                <button
+                  onClick={() => setNotification(null)}
+                  className="text-white/40 hover:text-white transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

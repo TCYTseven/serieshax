@@ -52,6 +52,21 @@ export default function ProfileMenu() {
     };
   }, [isOpen]);
 
+  const handleHome = () => {
+    setIsOpen(false);
+    router.push("/home");
+  };
+
+  const handleReflections = () => {
+    setIsOpen(false);
+    router.push("/reflections");
+  };
+
+  const handleBusinessPartner = () => {
+    setIsOpen(false);
+    router.push("/dashboard");
+  };
+
   const handleSettings = () => {
     setIsOpen(false);
     router.push("/settings");
@@ -83,9 +98,9 @@ export default function ProfileMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-[#0084ff]/20 text-[#0084ff] flex items-center justify-center text-xs font-light">
+        <div className="w-10 h-10 rounded-full bg-[#0084ff]/20 text-[#0084ff] flex items-center justify-center text-sm font-light">
           {getInitial()}
         </div>
       </button>
@@ -108,14 +123,40 @@ export default function ProfileMenu() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-12 left-0 z-50 w-48 bg-black border border-white/10 shadow-lg"
+              className="absolute top-14 left-0 z-50 w-52 bg-black border border-white/10 shadow-lg"
             >
               <div className="py-2">
-                <div className="px-4 py-2 border-b border-white/10">
-                  <p className="text-xs text-white/40 uppercase tracking-wider font-light">
-                    {user?.email || "Not signed in"}
+                <div className="px-4 py-3 border-b border-white/10">
+                  <p className="text-xs text-white/40 uppercase tracking-wider font-light mb-1">
+                    {userName || user?.email || "Not signed in"}
                   </p>
+                  {user?.email && (
+                    <p className="text-xs text-white/30 font-light">
+                      {user.email}
+                    </p>
+                  )}
                 </div>
+
+                <button
+                  onClick={handleHome}
+                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide"
+                >
+                  Home
+                </button>
+
+                <button
+                  onClick={handleReflections}
+                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide"
+                >
+                  Reflections
+                </button>
+
+                <button
+                  onClick={handleBusinessPartner}
+                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide"
+                >
+                  Business Partner
+                </button>
 
                 <button
                   onClick={handleSettings}
@@ -124,9 +165,11 @@ export default function ProfileMenu() {
                   Settings
                 </button>
 
+                <div className="border-t border-white/10 my-1" />
+
                 <button
                   onClick={handleLogout}
-                  className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/5 transition-colors font-light tracking-wide border-t border-white/10"
+                  className="w-full px-4 py-3 text-left text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors font-light tracking-wide"
                 >
                   Logout
                 </button>
