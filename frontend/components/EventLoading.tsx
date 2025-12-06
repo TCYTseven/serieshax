@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useOnboarding } from "@/contexts/OnboardingContext";
 
 interface EventLoadingProps {
   searchQuery: string;
@@ -54,7 +53,6 @@ export default function EventLoading({
   const [startTime] = useState(Date.now());
 
   useEffect(() => {
-    // Pulsing dots animation
     const dotInterval = setInterval(() => {
       setPulsingDots((prev) => {
         if (prev.length >= 3) return "";
@@ -62,21 +60,18 @@ export default function EventLoading({
       });
     }, 500);
 
-    // Step progression
     const stepTimers = loadingSteps.map((step, index) => {
       return setTimeout(() => {
         setActiveStep(index);
       }, step.delay);
     });
 
-    // Overall progress bar - smooth animation
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const newProgress = Math.min((elapsed / 15000) * 100, 100);
       setProgress(newProgress);
     }, 50);
 
-    // Navigate after 15 seconds
     const finalTimer = setTimeout(() => {
       router.push(
         `/event-results?query=${encodeURIComponent(searchQuery)}&people=${filters.people}&location=${encodeURIComponent(filters.location)}&budget=${filters.budget}&trending=${filters.trendingTopics}&gems=${filters.secretGems}`,
@@ -93,32 +88,19 @@ export default function EventLoading({
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
-      {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => {
-          const randomX = Math.random() * 100;
-          const randomY = Math.random() * 100;
-          return (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-[#0084ff]/20 rounded-full"
-              initial={{
-                x: `${randomX}%`,
-                y: `${randomY}%`,
-                opacity: 0,
-              }}
-              animate={{
-                y: [`${randomY}%`, `${(randomY + 30) % 100}%`],
-                opacity: [0, 0.5, 0],
-              }}
-              transition={{
-                duration: Math.random() * 3 + 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          );
-        })}
+      {/* Subtle background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0084ff]/2 rounded-full blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px',
+          }}
+        />
       </div>
 
       <div className="w-full max-w-3xl mx-auto space-y-12 relative z-10">
@@ -128,42 +110,32 @@ export default function EventLoading({
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-4"
         >
-          <h1 className="text-4xl md:text-5xl font-normal text-[#0084ff] leading-[1.1] tracking-[-0.02em]">
+          <h1 className="text-4xl md:text-5xl font-light text-[#0084ff] leading-[1.1] tracking-tight">
             Creating your perfect event{pulsingDots}
           </h1>
-          <p className="text-white/40 text-sm font-light">
+          <p className="text-white/40 text-base font-light">
             Our AI is working behind the scenes to curate the best experience for you
           </p>
         </motion.div>
 
         {/* Main Progress Bar */}
-        <div className="space-y-2">
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className="space-y-3">
+          <div className="flex justify-between text-xs text-white/40 uppercase tracking-wider font-medium">
+            <span>Processing</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-px bg-white/10 relative overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-[#0084ff] via-[#00a0ff] to-[#0084ff] rounded-full relative"
+              className="h-full bg-[#0084ff] absolute left-0 top-0"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.3, ease: "linear" }}
-            >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                animate={{ x: ["-100%", "100%"] }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-            </motion.div>
-          </div>
-          <div className="flex justify-between text-xs text-white/40">
-            <span>Processing</span>
-            <span>{Math.round(progress)}%</span>
+            />
           </div>
         </div>
 
         {/* Loading Steps */}
-        <div className="space-y-6">
+        <div className="space-y-1">
           {loadingSteps.map((step, index) => {
             const isActive = activeStep === index;
             const isCompleted = activeStep > index;
@@ -180,63 +152,50 @@ export default function EventLoading({
             return (
               <motion.div
                 key={step.id}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0 }}
                 animate={{
-                  opacity: isActive || isCompleted ? 1 : 0.4,
-                  x: 0,
+                  opacity: isActive || isCompleted ? 1 : 0.3,
                 }}
                 transition={{ delay: index * 0.1 }}
                 className="space-y-2"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {/* Animated icon */}
-                    <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
-                      {isCompleted ? (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-6 h-6 rounded-full bg-[#0084ff] flex items-center justify-center"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </motion.div>
-                      ) : isActive ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{
-                            duration: 1,
-                            repeat: Infinity,
-                            ease: "linear",
-                          }}
-                          className="w-6 h-6 border-2 border-[#0084ff] border-t-transparent rounded-full"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 border-2 border-white/20 rounded-full" />
-                      )}
-                    </div>
-                    <p
-                      className={`text-base transition-colors ${
-                        isActive
-                          ? "text-[#0084ff] font-medium"
-                          : isCompleted
-                            ? "text-white"
-                            : "text-white/40"
-                      }`}
-                    >
-                      {step.text}
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                    {isCompleted ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="w-4 h-4 border border-[#0084ff] flex items-center justify-center"
+                        style={{ borderRadius: 0 }}
+                      >
+                        <div className="w-2 h-2 bg-[#0084ff]" />
+                      </motion.div>
+                    ) : isActive ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                        className="w-4 h-4 border border-[#0084ff] border-t-transparent"
+                        style={{ borderRadius: 0 }}
+                      />
+                    ) : (
+                      <div className="w-4 h-4 border border-white/10" style={{ borderRadius: 0 }} />
+                    )}
                   </div>
+                  <p
+                    className={`text-base font-light transition-colors ${
+                      isActive
+                        ? "text-[#0084ff]"
+                        : isCompleted
+                          ? "text-white"
+                          : "text-white/30"
+                    }`}
+                  >
+                    {step.text}
+                  </p>
                 </div>
 
                 {/* Individual step progress bar */}
@@ -244,11 +203,11 @@ export default function EventLoading({
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="ml-9"
+                    className="ml-8"
                   >
-                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-px bg-white/5 relative overflow-hidden">
                       <motion.div
-                        className="h-full bg-[#0084ff]/30 rounded-full"
+                        className="h-full bg-[#0084ff]/30 absolute left-0 top-0"
                         initial={{ width: 0 }}
                         animate={{ width: `${stepProgress}%` }}
                         transition={{ duration: 0.3, ease: "linear" }}
@@ -266,18 +225,20 @@ export default function EventLoading({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex items-center justify-center gap-2 text-white/30 text-xs"
+          className="flex items-center justify-center gap-2 text-white/30 text-xs font-light uppercase tracking-wider"
         >
           <motion.div
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="w-2 h-2 bg-[#0084ff] rounded-full"
+            className="w-1 h-1 bg-[#0084ff]"
+            style={{ borderRadius: 0 }}
           />
           <span>AI processing in real-time</span>
           <motion.div
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-            className="w-2 h-2 bg-[#0084ff] rounded-full"
+            className="w-1 h-1 bg-[#0084ff]"
+            style={{ borderRadius: 0 }}
           />
         </motion.div>
       </div>

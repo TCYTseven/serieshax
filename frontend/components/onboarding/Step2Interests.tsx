@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/modal";
@@ -18,6 +18,7 @@ const interests = [
   "Music",
   "Food",
   "Travel",
+  "Fitness",
 ];
 
 const sports = ["Basketball", "Soccer", "Football", "Baseball", "Hockey"];
@@ -63,15 +64,13 @@ export default function Step2Interests({
 
   const toggleInterest = (interest: string) => {
     if (interest === "Sports" || interest === "Food" || interest === "Music") {
-      // Open modal for these categories
       setSelectedCategory(interest);
       if (interest === "Sports") {
-        setSelectedSport("Basketball"); // Default to Basketball
+        setSelectedSport("Basketball");
       }
       setTeamInput("");
       onOpen();
     } else {
-      // Regular toggle for other interests
       setSelectedInterests((prev) =>
         prev.includes(interest)
           ? prev.filter((i) => i !== interest)
@@ -83,11 +82,9 @@ export default function Step2Interests({
   const handleSportTeamSelect = (team: string) => {
     const finalTeam = team === "Other" ? teamInput.trim() : team;
     if (finalTeam) {
-      // Add Sports to interests if not already there
       if (!selectedInterests.includes("Sports")) {
         setSelectedInterests([...selectedInterests, "Sports"]);
       }
-      // Save team preference for the selected sport
       updateData({
         sportsTeams: {
           ...data.sportsTeams,
@@ -110,12 +107,10 @@ export default function Step2Interests({
     
     updateData({ foodGenres: newGenres });
     
-    // Add Food to interests if selecting genres
     if (newGenres.length > 0 && !selectedInterests.includes("Food")) {
       setSelectedInterests([...selectedInterests, "Food"]);
     }
     
-    // Remove Food if no genres selected
     if (newGenres.length === 0 && selectedInterests.includes("Food")) {
       setSelectedInterests(selectedInterests.filter((i) => i !== "Food"));
     }
@@ -129,12 +124,10 @@ export default function Step2Interests({
     
     updateData({ musicGenres: newGenres });
     
-    // Add Music to interests if selecting genres
     if (newGenres.length > 0 && !selectedInterests.includes("Music")) {
       setSelectedInterests([...selectedInterests, "Music"]);
     }
     
-    // Remove Music if no genres selected
     if (newGenres.length === 0 && selectedInterests.includes("Music")) {
       setSelectedInterests(selectedInterests.filter((i) => i !== "Music"));
     }
@@ -156,19 +149,19 @@ export default function Step2Interests({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full space-y-8"
+        className="w-full space-y-12"
       >
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-light text-white mb-2">
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl md:text-5xl font-light text-white mb-2 tracking-tight">
             What are you into?
           </h1>
-          <p className="text-white/50 text-lg">
+          <p className="text-white/40 text-base font-light">
             Select all that interest you
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5">
             {interests.map((interest, index) => {
               const isSelected = selectedInterests.includes(interest);
               let displayText = "";
@@ -186,25 +179,31 @@ export default function Step2Interests({
               return (
                 <motion.div
                   key={interest}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.03 }}
                 >
                   <button
                     onClick={() => toggleInterest(interest)}
-                    className={`w-full p-4 rounded-xl border transition-all duration-200 relative ${
+                    className={`w-full p-8 border transition-all duration-200 relative bg-black min-h-[120px] flex flex-col ${
+                      displayText ? "justify-start" : "justify-center items-center"
+                    } ${
                       isSelected
-                        ? "bg-[#0084ff] border-[#0084ff] text-white shadow-lg shadow-[#0084ff]/20"
-                        : "bg-[#0a0a0a] border-white/10 text-white/70 hover:border-[#0084ff]/30 hover:text-white hover:bg-[#111111]"
+                        ? "border-[#0084ff] text-white"
+                        : "border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
                     }`}
+                    style={{ borderRadius: 0 }}
                   >
-                    <span className="font-medium">{interest}</span>
-                    {displayText && (
-                      <span className="block text-xs mt-1 opacity-80">
-                        {displayText}
-                      </span>
+                    <div className={`flex flex-col gap-2 flex-1 ${displayText ? "items-start" : "items-center"}`}>
+                      <span className="font-light text-lg tracking-tight">{interest}</span>
+                      {displayText && (
+                        <span className="text-xs text-white/40 font-light">
+                          {displayText}
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-0 right-0 w-px h-full bg-[#0084ff]" />
                     )}
                   </button>
                 </motion.div>
@@ -213,23 +212,22 @@ export default function Step2Interests({
           </div>
         </div>
 
-        <div className="flex gap-4 justify-center pt-4">
-          <Button
-            onClick={onSkip}
-            variant="light"
-            className="text-white/50 hover:text-white/70"
-            radius="full"
-          >
-            Skip
-          </Button>
+        <div className="flex flex-col items-center gap-3 pt-6">
           <Button
             onClick={handleNext}
-            className="bg-[#0084ff] text-white font-medium hover:bg-[#00a0ff]"
-            radius="full"
+            className="bg-[#0084ff] text-white font-light hover:bg-[#00a0ff] min-w-[200px] uppercase tracking-wider text-sm"
             size="lg"
+            radius="none"
+            isDisabled={selectedInterests.length === 0}
           >
             Continue
           </Button>
+          <button
+            onClick={onSkip}
+            className="text-white/30 hover:text-white/50 text-xs transition-colors font-light"
+          >
+            Skip for now
+          </button>
         </div>
       </motion.div>
 
@@ -240,7 +238,7 @@ export default function Step2Interests({
         placement="center"
         size="2xl"
         classNames={{
-          base: "bg-[#0a0a0a] border border-white/10",
+          base: "bg-black border border-white/10",
           header: "border-b border-white/10",
           body: "py-6",
           footer: "border-t border-white/10",
@@ -250,16 +248,16 @@ export default function Step2Interests({
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1 text-white">
-                {selectedCategory === "Sports" && "Select your favorite teams"}
-                {selectedCategory === "Food" && "What cuisines do you like?"}
-                {selectedCategory === "Music" && "What music do you listen to?"}
+                <div className="w-12 h-px bg-[#0084ff] mb-2" />
+                {selectedCategory === "Sports" && <span className="text-xl font-light tracking-tight">Select your favorite teams</span>}
+                {selectedCategory === "Food" && <span className="text-xl font-light tracking-tight">What cuisines do you like?</span>}
+                {selectedCategory === "Music" && <span className="text-xl font-light tracking-tight">What music do you listen to?</span>}
               </ModalHeader>
               <ModalBody>
                 {selectedCategory === "Sports" && (
-                  <div className="space-y-6">
-                    {/* Sport Selector */}
+                  <div className="space-y-8">
                     <div>
-                      <p className="text-sm text-white/60 mb-3">Sport</p>
+                      <p className="text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">Sport</p>
                       <div className="flex gap-2 flex-wrap">
                         {sports.map((sport) => (
                           <button
@@ -268,11 +266,12 @@ export default function Step2Interests({
                               setSelectedSport(sport);
                               setTeamInput("");
                             }}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            className={`px-4 py-2 border text-sm font-light transition-all ${
                               selectedSport === sport
-                                ? "bg-[#0084ff] text-white"
-                                : "bg-[#111111] text-white/70 hover:bg-[#1a1a1a] border border-white/8"
+                                ? "bg-[#0084ff] border-[#0084ff] text-white"
+                                : "bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
                             }`}
+                            style={{ borderRadius: 0 }}
                           >
                             {sport}
                           </button>
@@ -280,9 +279,8 @@ export default function Step2Interests({
                       </div>
                     </div>
 
-                    {/* Team Selector */}
                     <div>
-                      <p className="text-sm text-white/60 mb-3">
+                      <p className="text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">
                         {selectedSport} Teams
                       </p>
                       <div className="grid grid-cols-3 gap-2">
@@ -290,38 +288,32 @@ export default function Step2Interests({
                           <button
                             key={team}
                             onClick={() => handleSportTeamSelect(team)}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                              data.sportsTeams[selectedSport] === team
-                                ? "bg-[#0084ff] text-white"
-                                : "bg-[#111111] text-white/70 hover:bg-[#1a1a1a] border border-white/8"
+                            className={`px-3 py-2 border text-xs font-light transition-all ${
+                              data.sportsTeams?.[selectedSport] === team
+                                ? "bg-[#0084ff] border-[#0084ff] text-white"
+                                : "bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
                             }`}
+                            style={{ borderRadius: 0 }}
                           >
                             {team}
                           </button>
                         ))}
                       </div>
                       {sportTeams[selectedSport]?.includes("Other") && (
-                        <div className="mt-3">
-                          <Input
+                        <div className="mt-4">
+                          <input
                             type="text"
                             placeholder="Enter your team name"
                             value={teamInput}
                             onChange={(e) => setTeamInput(e.target.value)}
-                            classNames={{
-                              base: "w-full",
-                              input: "text-white",
-                              inputWrapper:
-                                "bg-[#111111] border-white/8 hover:border-[#0084ff] focus-within:border-[#0084ff]",
-                            }}
-                            variant="bordered"
-                            size="sm"
-                            radius="lg"
+                            className="w-full px-0 py-3 bg-transparent border-b border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-[#0084ff] transition-colors font-light text-sm"
                           />
                           {teamInput && (
                             <Button
                               onClick={() => handleSportTeamSelect("Other")}
-                              className="mt-2 bg-[#0084ff] text-white w-full"
+                              className="mt-3 bg-[#0084ff] text-white w-full font-light uppercase tracking-wider text-xs"
                               size="sm"
+                              radius="none"
                             >
                               Save Team
                             </Button>
@@ -334,6 +326,7 @@ export default function Step2Interests({
 
                 {selectedCategory === "Food" && (
                   <div className="space-y-4">
+                    <p className="text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">Cuisines</p>
                     <div className="grid grid-cols-3 gap-2">
                       {foodGenres.map((genre) => {
                         const isSelected = data.foodGenres?.includes(genre);
@@ -341,11 +334,12 @@ export default function Step2Interests({
                           <button
                             key={genre}
                             onClick={() => handleFoodGenreToggle(genre)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            className={`px-3 py-2 border text-xs font-light transition-all ${
                               isSelected
-                                ? "bg-[#0084ff] text-white"
-                                : "bg-[#111111] text-white/70 hover:bg-[#1a1a1a] border border-white/8"
+                                ? "bg-[#0084ff] border-[#0084ff] text-white"
+                                : "bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
                             }`}
+                            style={{ borderRadius: 0 }}
                           >
                             {genre}
                           </button>
@@ -357,6 +351,7 @@ export default function Step2Interests({
 
                 {selectedCategory === "Music" && (
                   <div className="space-y-4">
+                    <p className="text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">Genres</p>
                     <div className="grid grid-cols-3 gap-2">
                       {musicGenres.map((genre) => {
                         const isSelected = data.musicGenres?.includes(genre);
@@ -364,11 +359,12 @@ export default function Step2Interests({
                           <button
                             key={genre}
                             onClick={() => handleMusicGenreToggle(genre)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            className={`px-3 py-2 border text-xs font-light transition-all ${
                               isSelected
-                                ? "bg-[#0084ff] text-white"
-                                : "bg-[#111111] text-white/70 hover:bg-[#1a1a1a] border border-white/8"
+                                ? "bg-[#0084ff] border-[#0084ff] text-white"
+                                : "bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
                             }`}
+                            style={{ borderRadius: 0 }}
                           >
                             {genre}
                           </button>
@@ -382,7 +378,8 @@ export default function Step2Interests({
                 <Button
                   variant="light"
                   onPress={onClose}
-                  className="text-white/50 hover:text-white/70"
+                  className="text-white/40 hover:text-white/60 font-light text-xs uppercase tracking-wider"
+                  radius="none"
                 >
                   Done
                 </Button>
