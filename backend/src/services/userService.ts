@@ -15,18 +15,28 @@ import {
 /**
  * Get or create a user by phone number
  * Creates a new user if one doesn't exist with the given phone number
+ * Also checks profiles table to link to existing auth users
  */
+/**
+ * Normalize phone number for comparison (remove +, spaces, dashes, etc.)
+ */
+function normalizePhoneNumber(phone: string): string {
+  return phone.replace(/[\+\s\-\(\)]/g, '');
+}
+
 export async function getOrCreateUser(
   phoneNumber: string, 
   seriesUserId?: string
 ): Promise<User> {
   const supabase = getSupabaseClient();
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
   
-  // First, try to find existing user by phone number
+  // First, try to find existing user by phone number in users table
+  // Check both exact match and normalized match
   const { data: existingUser, error: findError } = await supabase
     .from('users')
     .select('*')
-    .eq('phone_number', phoneNumber)
+    .or(`phone_number.eq.${phoneNumber},phone_number.eq.${normalizedPhone}`)
     .single();
 
   if (existingUser && !findError) {
@@ -47,6 +57,53 @@ export async function getOrCreateUser(
     }
     
     return updatedUser;
+  }
+
+  // If not found in users table, check profiles table for phone_number
+  // This links SMS users to existing website auth users
+  // We need to check all profiles and normalize phone numbers for comparison
+  const { data: allProfiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('user_id, phone_number');
+  
+  if (!profilesError && allProfiles) {
+    // Find profile with matching normalized phone number
+    const matchingProfile = allProfiles.find(profile => 
+      profile.phone_number && 
+      normalizePhoneNumber(profile.phone_number) === normalizedPhone
+    );
+    
+    if (matchingProfile) {
+      const { data: linkedUser, error: linkedUserError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', matchingProfile.user_id)
+        .single();
+
+      if (linkedUser && !linkedUserError) {
+        // Update phone_number in users table if not set or doesn't match
+        const needsUpdate = !linkedUser.phone_number || 
+                           normalizePhoneNumber(linkedUser.phone_number) !== normalizedPhone;
+        
+        if (needsUpdate) {
+          await supabase
+            .from('users')
+            .update({ 
+              phone_number: phoneNumber, // Store original format
+              last_active_at: new Date().toISOString()
+            })
+            .eq('id', linkedUser.id);
+        } else {
+          await supabase
+            .from('users')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('id', linkedUser.id);
+        }
+        
+        console.log(`✅ Linked SMS user to existing auth user: ${linkedUser.id} (${phoneNumber})`);
+        return linkedUser;
+      }
+    }
   }
 
   // Create new user

@@ -7,6 +7,7 @@ import {
   getOrCreateConversation,
   addMessage,
   getConversationHistory,
+  updateConversationContext,
   searchSpots,
   getSpotsForVibes,
   generateResponse,
@@ -20,6 +21,11 @@ import {
   recordRequest,
   getRateLimitMessage,
   getPolymarketContext,
+  isReflectionRequest,
+  generateReflectionPrompt,
+  isWaitingForReflection,
+  generateReflectionAnalysis,
+  createReflection,
 } from './services';
 import { 
   sendMessageToChat, 
@@ -85,6 +91,72 @@ async function generateMessageResponse(
 
     // Get conversation history for context
     const history = await getConversationHistory(conversation.id, 10);
+
+    // Check if we're waiting for a reflection response
+    const waitingForReflection = conversation.context_data?.waiting_for_reflection === true;
+    
+    // If we're waiting for reflection, process it
+    if (waitingForReflection) {
+      console.log('   📝 Processing reflection response...');
+      
+      // Generate analysis for the reflection
+      const { analysis, followUpQuestions } = await generateReflectionAnalysis(messageBody, history);
+      
+      // Store the reflection in Supabase
+      const reflection = await createReflection({
+        user_id: user.id,
+        raw_reflection: messageBody, // Store raw, unmodified text
+        analysis: analysis,
+        follow_up_questions: followUpQuestions,
+      });
+      
+      console.log(`   ✅ Reflection stored with ID: ${reflection.id}`);
+      
+      // Clear the waiting flag
+      await updateConversationContext(conversation.id, {
+        waiting_for_reflection: false,
+      });
+      
+      // Build response with analysis
+      let response = `Thank you for sharing your reflection. Here's what I noticed:\n\n${analysis}`;
+      
+      if (followUpQuestions.length > 0) {
+        response += '\n\nSome questions to consider:\n';
+        followUpQuestions.forEach((q, idx) => {
+          response += `${idx + 1}. ${q}\n`;
+        });
+      }
+      
+      // Save assistant response
+      await addMessage(conversation.id, 'assistant', response, {
+        intent: 'reflection',
+        reflection_id: reflection.id,
+      });
+      
+      console.log(`   ✅ Reflection analysis sent`);
+      return response;
+    }
+
+    // Check if this is a reflection request
+    if (isReflectionRequest(messageBody)) {
+      console.log('   📝 Reflection request detected');
+      
+      // Set flag in conversation context
+      await updateConversationContext(conversation.id, {
+        waiting_for_reflection: true,
+      });
+      
+      // Generate prompt asking for more details
+      const response = generateReflectionPrompt();
+      
+      // Save assistant response
+      await addMessage(conversation.id, 'assistant', response, {
+        intent: 'reflection_request',
+      });
+      
+      console.log(`   ✅ Reflection prompt sent`);
+      return response;
+    }
 
     // Detect intent
     const intent = await detectIntent(messageBody);

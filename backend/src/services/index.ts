@@ -34,6 +34,9 @@ export {
 // Rate Limiter
 export * from './rateLimiter';
 
+// Reflection Service
+export * from './reflectionService';
+
 // Re-export types for convenience
 export type {
   User,
