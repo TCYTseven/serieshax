@@ -8,6 +8,7 @@ export interface OnboardingData {
   name: string;
   age: string;
   location: string;
+  phoneNumber: string;
   interests: string[];
   goals: string[];
   sportsTeams: Record<string, string>; // sport -> team name
@@ -30,6 +31,7 @@ const defaultData: OnboardingData = {
   name: "",
   age: "",
   location: "",
+  phoneNumber: "",
   interests: [],
   goals: [],
   sportsTeams: {},
@@ -68,6 +70,7 @@ export function OnboardingProvider({
               name: profileData.display_name || "",
               age: profileData.age?.toString() || "",
               location: profileData.location || profileData.city || "",
+              phoneNumber: profileData.phone_number || "",
               interests: profileData.interests || [],
               goals: profileData.goals || [],
               sportsTeams: profileData.sports_teams || {},
