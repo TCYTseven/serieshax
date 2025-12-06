@@ -31,11 +31,9 @@ async function testPolymarket() {
   
   if (knicksContext.markets.length > 0) {
     console.log('\nMarkets:');
-    knicksContext.markets.forEach((m, i) => {
-      console.log(`  ${i + 1}. ${m.question}`);
-      console.log(`     Probability: ${(m.probability * 100).toFixed(1)}%`);
-      console.log(`     Volume: $${m.volume.toLocaleString()}`);
-      console.log(`     Is Hot: ${m.isHot ? '🔥 Yes' : 'No'}`);
+    knicksContext.markets.slice(0, 5).forEach((m, i) => {
+      console.log(`  ${i + 1}. ${m.question.slice(0, 60)}...`);
+      console.log(`     Probability: ${(m.probability * 100).toFixed(1)}% | Volume: $${m.volume.toLocaleString()}`);
     });
   }
   
@@ -69,11 +67,18 @@ async function testPolymarket() {
   console.log('Markets found:', btcContext.markets.length);
   console.log('Trending Score:', btcContext.trendingScore);
   
+  if (btcContext.markets.length > 0) {
+    console.log('\nTop Bitcoin Markets:');
+    btcContext.markets.slice(0, 5).forEach((m, i) => {
+      console.log(`  ${i + 1}. ${m.question.slice(0, 55)}...`);
+      console.log(`     ${(m.probability * 100).toFixed(1)}% YES | Vol: $${m.volume.toLocaleString()}`);
+    });
+  }
+  
   if (btcContext.topPrediction) {
-    console.log('\nTop Prediction:');
-    console.log(`  Question: ${btcContext.topPrediction.question}`);
+    console.log('\n📊 Top Prediction (most interesting):');
+    console.log(`  "${btcContext.topPrediction.question}"`);
     console.log(`  Probability: ${(btcContext.topPrediction.probability * 100).toFixed(1)}%`);
-    console.log(`  Confidence: ${btcContext.topPrediction.confidence}`);
   }
   
   if (btcContext.suggestedIcebreaker) {

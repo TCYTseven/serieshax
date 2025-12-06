@@ -5,6 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
+    "dev:robust": "ts-node src/index-robust.ts",
+    "dev:simple": "ts-node src/index-simple.ts",
+    "dev:server": "ts-node src/index-server.ts",
     "dev:server": "ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -12,8 +15,11 @@
     "test:connection": "ts-node src/test-connection.ts",
     "test:services": "ts-node src/test-services.ts",
     "test:phase3": "ts-node src/test-phase3.ts",
+    "test:phase3.6": "ts-node src/test-phase3.6.ts",
     "debug:consumer": "ts-node src/debug-consumer.ts",
-    "test:polymarket": "ts-node src/test-polymarket.ts"
+    "test:polymarket": "ts-node src/test-polymarket.ts",
+    "test:oracle": "ts-node src/test-oracle.ts",
+    "test:event-agent": "ts-node src/test-event-agent.ts"
   },
   "keywords": [
     "series",

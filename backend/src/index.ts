@@ -41,15 +41,34 @@ import { ParsedIncomingMessage } from './kafka/types';
  * 
  * This service connects to Series via Kafka to receive incoming messages
  * and uses the Series REST API to send responses back to users.
+ * 
+ * Phase 3.5: Now using the OracleAgent for message processing
  */
+
+import { seriesConsumer } from './kafka/consumer';
+import { kafkaConfig } from './config/kafka';
+import { isSupabaseConfigured } from './config/supabase';
+import { isOpenAIConfigured } from './services';
+import { isSeriesApiConfigured } from './services/seriesApi';
+import { OracleAgent, createOracleAgent } from './oracle';
 
 console.log('');
 console.log('╔═══════════════════════════════════════════════════════════╗');
 console.log('║           🔮 SOCIAL ORACLE BACKEND                        ║');
-console.log('║           Series Hackathon - Kafka + REST API             ║');
+console.log('║           Series Hackathon - Phase 3.5                    ║');
 console.log('╚═══════════════════════════════════════════════════════════╝');
 console.log('');
 
+<<<<<<< backend-kafka-setup
+// Create the Oracle Agent
+const oracle = createOracleAgent({
+  enablePolymarket: true,
+  enableReddit: true,
+  enableTypingIndicator: true,
+  maxResponseLength: 320,
+  debugMode: process.env.NODE_ENV === 'development',
+});
+=======
 /**
  * Process an incoming message and generate a response
  */
@@ -304,6 +323,7 @@ async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<vo
     }
   }
 }
+>>>>>>> main
 
 /**
  * Main application startup
@@ -323,11 +343,13 @@ async function main(): Promise<void> {
     console.log('   Add SERIES_API_KEY=your-api-key to your .env file\n');
   }
 
-  // Set up message handler
-  seriesConsumer.setMessageHandler(handleIncomingMessage);
+  // Set up message handler - delegate to Oracle Agent
+  seriesConsumer.setMessageHandler(async (message) => {
+    await oracle.handleIncomingMessage(message);
+  });
 
   try {
-    // Start the consumer (no need for producer since we use REST API)
+    // Start the consumer
     await seriesConsumer.start();
 
     console.log('\n');
@@ -336,6 +358,7 @@ async function main(): Promise<void> {
     console.log(`📞 Listening for SMS on: ${kafkaConfig.senderNumber}`);
     console.log(`📡 Kafka topic: ${kafkaConfig.topic}`);
     console.log(`🌐 Sending replies via: Series REST API`);
+    console.log(`🔮 Oracle Agent: Active`);
     console.log('═══════════════════════════════════════════════════════════');
     console.log('\n💡 Send an SMS to the number above to test!\n');
 

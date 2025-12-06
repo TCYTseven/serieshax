@@ -10,7 +10,7 @@ let supabaseClient: SupabaseClient | null = null;
 
 /**
  * Get the Supabase client instance (singleton)
- * Uses service role key for full backend access
+ * Uses service role key for full backend access, falls back to anon key
  */
 export function getSupabaseClient(): SupabaseClient {
   if (supabaseClient) {
@@ -18,11 +18,12 @@ export function getSupabaseClient(): SupabaseClient {
   }
 
   const supabaseUrl = env.SUPABASE_URL;
-  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  // Prefer service role key, but fall back to anon key for tables without RLS
+  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      '❌ Supabase configuration missing. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env'
+      '❌ Supabase configuration missing. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) in .env'
     );
   }
 
@@ -54,7 +55,7 @@ export function getSupabaseClientSafe(): SupabaseClient | null {
  * Check if Supabase is properly configured
  */
 export function isSupabaseConfigured(): boolean {
-  return !!(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY));
 }
 
 // Export a lazy-loaded supabase instance

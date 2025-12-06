@@ -31,6 +31,22 @@ export {
   type PolymarketContext 
 } from '../integrations/polymarket';
 
+// Re-export Reddit integration (Live API)
+export {
+  getRedditContext,
+  findHiddenGems,
+  getLocalSentiment,
+  getTrendingTopics,
+  getSpotRedditData,
+  batchGetSpotRedditData,
+  getPersonalizedRecommendations,
+  clearRedditCache,
+  isCitySupported,
+  getSupportedCities,
+  type RedditContext,
+  type SpotRedditData,
+} from '../integrations/reddit';
+
 // Rate Limiter
 export * from './rateLimiter';
 

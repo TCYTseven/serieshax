@@ -6,23 +6,22 @@ dotenv.config();
 
 /**
  * Environment variable schema with validation
+ * Kafka variables are optional for server-only mode (API without SMS processing)
  */
 const envSchema = z.object({
-  // Kafka Configuration
-  KAFKA_BOOTSTRAP_SERVERS: z.string().min(1, 'KAFKA_BOOTSTRAP_SERVERS is required'),
-  KAFKA_TOPIC: z.string().min(1, 'KAFKA_TOPIC is required'),
-  KAFKA_CONSUMER_GROUP: z.string().min(1, 'KAFKA_CONSUMER_GROUP is required'),
-  KAFKA_CLIENT_ID: z.string().min(1, 'KAFKA_CLIENT_ID is required'),
+  // Kafka Configuration (optional for API-only mode)
+  KAFKA_BOOTSTRAP_SERVERS: z.string().optional().default(''),
+  KAFKA_TOPIC: z.string().optional().default(''),
+  KAFKA_CONSUMER_GROUP: z.string().optional().default(''),
+  KAFKA_CLIENT_ID: z.string().optional().default(''),
   
-  // SASL Authentication (Confluent Cloud / Series)
-  // Username: Usually the API Key from Confluent (e.g., QRHNR6BCKVHD4M3U)
-  KAFKA_SASL_USERNAME: z.string().min(1, 'KAFKA_SASL_USERNAME is required'),
-  // Password: The API Secret from Confluent (get this from your Series dashboard)
-  KAFKA_SASL_PASSWORD: z.string().min(1, 'KAFKA_SASL_PASSWORD is required'),
+  // SASL Authentication (Confluent Cloud / Series) - optional for API-only mode
+  KAFKA_SASL_USERNAME: z.string().optional().default(''),
+  KAFKA_SASL_PASSWORD: z.string().optional().default(''),
   KAFKA_SASL_MECHANISM: z.enum(['PLAIN', 'SCRAM-SHA-256', 'SCRAM-SHA-512']).default('PLAIN'),
 
-  // Series SMS
-  SERIES_SENDER_NUMBER: z.string().min(1, 'SERIES_SENDER_NUMBER is required'),
+  // Series SMS (optional for API-only mode)
+  SERIES_SENDER_NUMBER: z.string().optional().default(''),
 
   // Supabase Configuration
   SUPABASE_URL: z.string().url().optional(),
@@ -31,6 +30,9 @@ const envSchema = z.object({
 
   // OpenAI Configuration
   OPENAI_API_KEY: z.string().optional(),
+
+  // Server Configuration
+  PORT: z.string().optional().default('3001'),
 
   // Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -52,5 +54,19 @@ function validateEnv() {
 }
 
 export const env = validateEnv();
+
+/**
+ * Check if Kafka is configured (for SMS processing)
+ */
+export function isKafkaConfigured(): boolean {
+  return !!(
+    env.KAFKA_BOOTSTRAP_SERVERS &&
+    env.KAFKA_TOPIC &&
+    env.KAFKA_CONSUMER_GROUP &&
+    env.KAFKA_CLIENT_ID &&
+    env.KAFKA_SASL_USERNAME &&
+    env.KAFKA_SASL_PASSWORD
+  );
+}
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useOnboarding } from "@/contexts/OnboardingContext";
+import { 
+  createPersonalizedEvents, 
+  generateFallbackEvents,
+  GeneratedEvent,
+  SearchFilters,
+} from "@/lib/event-creation-api";
 
 interface EventLoadingProps {
   searchQuery: string;
@@ -47,11 +54,66 @@ export default function EventLoading({
   filters,
 }: EventLoadingProps) {
   const router = useRouter();
+  const { data: onboardingData } = useOnboarding();
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [pulsingDots, setPulsingDots] = useState("");
   const [startTime] = useState(Date.now());
+  const [apiCallComplete, setApiCallComplete] = useState(false);
+  const [generatedEvents, setGeneratedEvents] = useState<GeneratedEvent[]>([]);
+  const apiCalledRef = useRef(false);
 
+  // Call the Event Creation Agent API
+  useEffect(() => {
+    if (apiCalledRef.current) return;
+    apiCalledRef.current = true;
+
+    const callEventCreationAPI = async () => {
+      console.log("🔮 Starting Event Creation Agent...");
+      console.log("   Onboarding data:", onboardingData);
+      console.log("   Filters:", filters);
+
+      try {
+        const searchFilters: SearchFilters = {
+          people: filters.people,
+          location: filters.location || onboardingData.location?.split(',')[0].trim() || '',
+          budget: filters.budget,
+          trendingTopics: filters.trendingTopics,
+          secretGems: filters.secretGems,
+        };
+
+        // Call the backend API
+        const result = await createPersonalizedEvents(
+          onboardingData,
+          searchFilters,
+          searchQuery
+        );
+
+        if (result.success && result.events && result.events.length > 0) {
+          console.log("✅ Event Creation successful:", result.events.length, "events");
+          console.log("✅ First event:", result.events[0]?.locationName, "at", result.events[0]?.locationAddress);
+          setGeneratedEvents(result.events);
+        } else {
+          // API failed - log error but DON'T use fallback - let user see the error
+          console.error("❌ API failed or returned no events:", result.error);
+          console.error("❌ NOT using fallback - API should work!");
+          // Still set empty array so navigation doesn't happen
+          setGeneratedEvents([]);
+        }
+      } catch (error) {
+        console.error("❌ Event Creation error:", error);
+        // Don't use fallback - let EventResults handle it
+        console.error("⚠️ NOT using fallback - EventResults will call API directly");
+        setGeneratedEvents([]);
+      } finally {
+        setApiCallComplete(true);
+      }
+    };
+
+    callEventCreationAPI();
+  }, [onboardingData, filters, searchQuery]);
+
+  // Animate loading steps and progress
   useEffect(() => {
     const dotInterval = setInterval(() => {
       setPulsingDots((prev) => {
@@ -72,19 +134,61 @@ export default function EventLoading({
       setProgress(newProgress);
     }, 50);
 
-    const finalTimer = setTimeout(() => {
-      router.push(
-        `/event-results?query=${encodeURIComponent(searchQuery)}&people=${filters.people}&location=${encodeURIComponent(filters.location)}&budget=${filters.budget}&trending=${filters.trendingTopics}&gems=${filters.secretGems}`,
-      );
-    }, 15000);
-
     return () => {
       clearInterval(dotInterval);
       clearInterval(progressInterval);
       stepTimers.forEach((timer) => clearTimeout(timer));
-      clearTimeout(finalTimer);
     };
-  }, [searchQuery, filters, router, startTime]);
+  }, [startTime]);
+
+  // Navigate when both loading animation is done AND API is complete
+  useEffect(() => {
+    // Wait for minimum loading time (for UX) AND API completion
+    const minLoadingTime = 5000; // 5 seconds minimum for good UX
+    const elapsed = Date.now() - startTime;
+    
+    if (apiCallComplete && elapsed >= minLoadingTime && generatedEvents.length > 0) {
+      // Store events in sessionStorage for the results page
+      sessionStorage.setItem('generatedEvents', JSON.stringify(generatedEvents));
+      
+      // Navigate to results page
+      router.push(
+        `/event-results?query=${encodeURIComponent(searchQuery)}&people=${filters.people}&location=${encodeURIComponent(filters.location)}&budget=${filters.budget}&trending=${filters.trendingTopics}&gems=${filters.secretGems}`
+      );
+    } else if (apiCallComplete && generatedEvents.length > 0) {
+      // API is done but we need to wait for minimum loading time
+      const remainingTime = minLoadingTime - elapsed;
+      const timer = setTimeout(() => {
+        sessionStorage.setItem('generatedEvents', JSON.stringify(generatedEvents));
+        router.push(
+          `/event-results?query=${encodeURIComponent(searchQuery)}&people=${filters.people}&location=${encodeURIComponent(filters.location)}&budget=${filters.budget}&trending=${filters.trendingTopics}&gems=${filters.secretGems}`
+        );
+      }, remainingTime);
+      return () => clearTimeout(timer);
+    }
+  }, [apiCallComplete, generatedEvents, startTime, router, searchQuery, filters]);
+
+  // Maximum loading timeout (fallback safety) - only triggers if API hasn't completed
+  useEffect(() => {
+    // Don't set a new timeout if API already completed
+    if (apiCallComplete && generatedEvents.length > 0) {
+      return;
+    }
+    
+    const maxTimeout = setTimeout(() => {
+      // Only navigate if API hasn't completed after max time - let EventResults handle it
+      if (!apiCallComplete) {
+        console.error("⏰ Max timeout reached (45s), API still pending - navigating to results page");
+        console.error("⚠️ EventResults will call API directly - NO FALLBACK!");
+        // Navigate to results page - it will call API directly
+        router.push(
+          `/event-results?query=${encodeURIComponent(searchQuery)}&people=${filters.people}&location=${encodeURIComponent(filters.location)}&budget=${filters.budget}&trending=${filters.trendingTopics}&gems=${filters.secretGems}`
+        );
+      }
+    }, 45000); // 45 second max timeout - GPT + Polymarket + Reddit can take time
+
+    return () => clearTimeout(maxTimeout);
+  }, [apiCallComplete, generatedEvents, filters, onboardingData, router, searchQuery]);
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
@@ -241,6 +345,17 @@ export default function EventLoading({
             style={{ borderRadius: 0 }}
           />
         </motion.div>
+
+        {/* API Status Indicator (subtle) */}
+        {apiCallComplete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-xs text-[#0084ff]/50 font-light"
+          >
+            ✓ {generatedEvents.length} personalized suggestions ready
+          </motion.div>
+        )}
       </div>
     </div>
   );
