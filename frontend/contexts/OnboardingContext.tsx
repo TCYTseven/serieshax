@@ -8,6 +8,9 @@ export interface OnboardingData {
   location: string;
   interests: string[];
   goals: string[];
+  sportsTeams: Record<string, string>; // sport -> team name
+  foodGenres: string[]; // food genres
+  musicGenres: string[]; // music genres
 }
 
 interface OnboardingContextType {
@@ -24,6 +27,9 @@ const defaultData: OnboardingData = {
   location: "",
   interests: [],
   goals: [],
+  sportsTeams: {},
+  foodGenres: [],
+  musicGenres: [],
 };
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(
