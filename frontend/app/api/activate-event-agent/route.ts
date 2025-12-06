@@ -35,14 +35,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get eventId from request body if provided
+    let eventId = 1;
+    try {
+      const body = await request.json().catch(() => ({}));
+      if (body.eventId) {
+        const idStr = body.eventId.toString().replace('supabase-', '');
+        eventId = parseInt(idStr) || 1;
+      }
+    } catch (error) {
+      // Default to event id 1 if parsing fails
+      eventId = 1;
+    }
+
     // Use server client for database queries
     const supabase = createServerSupabaseClient();
 
-    // Get event details from events table (hardcoded to id 1 for now)
+    // Get event details from events table
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('*')
-      .eq('id', 1)
+      .eq('id', eventId)
       .single();
 
     if (eventError || !event) {
@@ -62,8 +75,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get event name for display_name (use location_name or initiator_name as fallback)
-    const eventName = event.name || event.location_name || event.initiator_name || 'Event';
+    // Get event name for display_name (use event_name, location_name, or initiator_name as fallback)
+    const eventName = event.event_name || event.location_name || event.initiator_name || 'Event';
 
     // Format event details nicely for SMS
     const eventMessage = formatEventMessage(event);
@@ -179,17 +192,64 @@ function formatEventMessage(event: any): string {
     const participants = Object.keys(groupList);
     if (participants.length > 0) {
       lines.push(`👥 Participants: ${participants.join(', ')}`);
+      lines.push(`📊 Total Attendees: ${participants.length}`);
     }
   }
   
-  // Add any other relevant event details
+  // Add description
   if (event.description) {
     lines.push('');
     lines.push(`📝 ${event.description}`);
   }
   
+  // Add notes from polymarket_reddit if available
+  if (event.polymarket_reddit) {
+    const redditNotes = event.polymarket_reddit?.reddit?.notes;
+    const polymarketNotes = event.polymarket_reddit?.polymarket?.notes;
+    
+    if (redditNotes || polymarketNotes) {
+      lines.push('');
+      lines.push('📌 Notes:');
+      if (redditNotes) {
+        lines.push(`   Reddit: ${redditNotes}`);
+      }
+      if (polymarketNotes) {
+        lines.push(`   Polymarket: ${polymarketNotes}`);
+      }
+    }
+  }
+  
+  // Add vibes if available (can be array or string)
+  if (event.vibes) {
+    lines.push('');
+    lines.push('✨ Vibes:');
+    if (Array.isArray(event.vibes)) {
+      lines.push(`   ${event.vibes.join(', ')}`);
+    } else {
+      lines.push(`   ${event.vibes}`);
+    }
+  }
+  
+  // Add series reviews if available
+  if (event.series_reviews && Array.isArray(event.series_reviews) && event.series_reviews.length > 0) {
+    lines.push('');
+    lines.push('⭐ Reviews:');
+    event.series_reviews.forEach((review: any) => {
+      if (review.name && review.review) {
+        lines.push(`   ${review.name}: ${review.review}`);
+      }
+    });
+  }
+  
+  // Add any additional info
+  if (event.additional_info) {
+    lines.push('');
+    lines.push('ℹ️ Additional Info:');
+    lines.push(event.additional_info);
+  }
+  
   lines.push('');
-  lines.push('Looking forward to seeing you there!');
+  lines.push('Looking forward to seeing you there! 🎊');
   
   return lines.join('\n');
 }

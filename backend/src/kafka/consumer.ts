@@ -46,7 +46,7 @@ class SeriesConsumer {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.warn('⚠️ Consumer is already running');
+      console.warn('⚠️ Coimage.pngnsumer is already running');
       return;
     }
 

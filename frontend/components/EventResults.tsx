@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Modal, ModalContent, ModalHeader, ModalBody, useDisclosure } from "@heroui/modal";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/modal";
+import { Button } from "@heroui/button";
 import { OnboardingData } from "@/contexts/OnboardingContext";
 
 interface EventResultsProps {
@@ -286,7 +287,7 @@ const generateEventSuggestions = (
 };
 
 // Event Card Component
-const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewReviews: (event: any) => void }) => {
+const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion: any; onViewReviews: (event: any) => void; onActivateEvent: (event: any) => void }) => {
   return (
     <div className="bg-black border border-white/10 p-8 md:p-10 h-full flex flex-col">
       {/* Image */}
@@ -381,30 +382,7 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewRevie
             </button>
           </div>
           <button
-            onClick={async () => {
-              try {
-                console.log("Activating Event Agent for:", suggestion.name);
-                const response = await fetch('/api/activate-event-agent', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                  console.log('Event agent activated successfully!');
-                  // You could add a toast notification here
-                } else {
-                  console.error('Failed to activate event agent:', result.error);
-                  alert(`Failed to activate event agent: ${result.error}`);
-                }
-              } catch (error) {
-                console.error('Error activating event agent:', error);
-                alert('An error occurred while activating the event agent');
-              }
-            }}
+            onClick={() => onActivateEvent(suggestion)}
             className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
             style={{ borderRadius: 0 }}
           >
@@ -421,15 +399,145 @@ export default function EventResults({
   filters,
   onboardingData,
 }: EventResultsProps) {
-  const suggestions = generateEventSuggestions(onboardingData, filters);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [eventToSchedule, setEventToSchedule] = useState<any>(null);
   const [startIndex, setStartIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isScheduleOpen, onOpen: onScheduleOpen, onClose: onScheduleClose } = useDisclosure();
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Fetch Supabase event and combine with mock data
+  useEffect(() => {
+    const loadEvents = async () => {
+      const mockEvents = generateEventSuggestions(onboardingData, filters);
+      
+      try {
+        // Fetch event from Supabase
+        const response = await fetch('/api/get-event?id=1');
+        const result = await response.json();
+        
+        if (result.success && result.event) {
+          const supabaseEvent = transformSupabaseEvent(result.event);
+          // Insert as second event if transformation was successful
+          if (supabaseEvent) {
+            mockEvents.splice(1, 0, supabaseEvent);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading Supabase event:', error);
+      }
+      
+      setSuggestions(mockEvents);
+    };
+
+    loadEvents();
+  }, [onboardingData, filters]);
+
+  const transformSupabaseEvent = (event: any) => {
+    if (!event || !event.id) {
+      console.error('Invalid event data:', event);
+      return null;
+    }
+
+    // Extract participants from group_list
+    const participants = event.group_list && typeof event.group_list === 'object' 
+      ? Object.keys(event.group_list) 
+      : [];
+    
+    // Extract notes from polymarket_reddit
+    const redditNotes = event.polymarket_reddit?.reddit?.notes || null;
+    const polymarketNotes = event.polymarket_reddit?.polymarket?.notes || null;
+    const notes = [redditNotes, polymarketNotes].filter(Boolean).join(' ');
+
+    // Format vibes array as string
+    const vibesText = Array.isArray(event.vibes) ? event.vibes.join(', ') : (event.vibes || null);
+
+    // Transform series_reviews to match the review format
+    const reviews = Array.isArray(event.series_reviews) 
+      ? event.series_reviews.map((review: any, idx: number) => ({
+          id: idx + 1,
+          user: review.name || 'Anonymous',
+          rating: review.stars || 5,
+          text: review.review || '',
+          date: 'Recently',
+        }))
+      : [];
+    
+    return {
+      id: `supabase-${event.id}`,
+      name: event.event_name || event.location_name || event.initiator_name || 'Event',
+      type: 'Event',
+      description: `Join ${event.initiator_name || 'us'} at ${event.location_name || 'this location'}. ${event.event_name ? `Event: ${event.event_name}` : ''}`,
+      image: "/centralpark.jpg",
+      location: event.location_name,
+      organizer: event.initiator_name,
+      participants: participants,
+      group_list: event.group_list,
+      notes: notes || null,
+      vibes: vibesText,
+      attendees: participants.length,
+      isSupabaseEvent: true,
+      supabaseEventData: event,
+      isPartnered: event.series_partner || false,
+      price: "$$",
+      distance: "0.5 miles",
+      reviews: reviews,
+      seriesReview: reviews.length > 0 
+        ? `Rated ${(reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length).toFixed(1)} stars by Series Social Oracle users`
+        : null,
+      redditNote: redditNotes,
+      polymarketNote: polymarketNotes,
+    };
+  };
 
   const handleViewReviews = (event: any) => {
     setSelectedEvent(event);
     onOpen();
+  };
+
+  const handleActivateEvent = (event: any) => {
+    setEventToSchedule(event);
+    onScheduleOpen();
+  };
+
+  const handleScheduleEvent = async () => {
+    if (!eventToSchedule) return;
+    
+    setIsScheduling(true);
+    try {
+      // Use the Supabase event data if available, otherwise use the transformed event
+      const eventData = eventToSchedule.supabaseEventData || eventToSchedule;
+      
+      const response = await fetch('/api/activate-event-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ eventId: eventData.id || 1 }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setNotification({ type: 'success', message: 'Event scheduled successfully! Group chat created.' });
+        onScheduleClose();
+        setEventToSchedule(null);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setNotification(null), 3000);
+      } else {
+        setNotification({ type: 'error', message: result.error || 'Failed to schedule event' });
+        setTimeout(() => setNotification(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error scheduling event:', error);
+      setNotification({ type: 'error', message: 'An error occurred while scheduling the event' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
   const handleNext = (e: React.MouseEvent) => {
@@ -499,14 +607,14 @@ export default function EventResults({
                     }}
                     className="grid grid-cols-1 md:grid-cols-2 gap-px h-full w-full absolute inset-0"
                   >
-                    {visibleEvents.map((event, idx) => {
+                    {visibleEvents.filter(Boolean).map((event, idx) => {
                       const isLeft = idx === 0;
                       return (
                         <div
-                          key={`${event.id}-${startIndex}`}
+                          key={`${event?.id || idx}-${startIndex}`}
                           className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
                         >
-                          <EventCard suggestion={event} onViewReviews={handleViewReviews} />
+                          <EventCard suggestion={event} onViewReviews={handleViewReviews} onActivateEvent={handleActivateEvent} />
                         </div>
                       );
                     })}
@@ -608,6 +716,134 @@ export default function EventResults({
           )}
         </ModalContent>
       </Modal>
+
+      {/* Schedule Confirmation Modal */}
+      <Modal
+        isOpen={isScheduleOpen}
+        onClose={onScheduleClose}
+        placement="center"
+        size="2xl"
+        classNames={{
+          base: "bg-black border border-white/10",
+          header: "border-b border-white/10",
+          body: "py-6",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 text-white">
+                <div className="w-12 h-px bg-[#0084ff] mb-2" />
+                <h3 className="text-2xl font-light tracking-tight">Schedule Event</h3>
+                <p className="text-white/40 text-sm font-light">
+                  Review event details before scheduling
+                </p>
+              </ModalHeader>
+              <ModalBody>
+                {eventToSchedule && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-white text-lg font-light mb-2">{eventToSchedule.name}</h4>
+                      <p className="text-white/60 text-sm font-light">{eventToSchedule.description}</p>
+                    </div>
+                    
+                    <div className="space-y-2 pt-3 border-t border-white/10">
+                      {eventToSchedule.organizer && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Organizer:</span> {eventToSchedule.organizer}
+                        </div>
+                      )}
+                      {eventToSchedule.location && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Location:</span> {eventToSchedule.location}
+                        </div>
+                      )}
+                      {eventToSchedule.participants && eventToSchedule.participants.length > 0 && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Participants:</span> {eventToSchedule.participants.join(', ')}
+                        </div>
+                      )}
+                      {eventToSchedule.attendees && (
+                        <div className="text-white/70 text-sm">
+                          <span className="text-white/40">Attendees:</span> {eventToSchedule.attendees}
+                        </div>
+                      )}
+                    </div>
+
+                    {eventToSchedule.notes && (
+                      <div className="pt-3 border-t border-white/10">
+                        <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Notes</p>
+                        <p className="text-white/60 text-sm font-light">{eventToSchedule.notes}</p>
+                      </div>
+                    )}
+
+                    {eventToSchedule.vibes && (
+                      <div className="pt-3 border-t border-white/10">
+                        <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Vibes</p>
+                        <p className="text-white/60 text-sm font-light">{eventToSchedule.vibes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  onClick={onClose}
+                  className="px-6 py-2 border border-white/20 text-white/60 hover:bg-white/5 transition-all text-xs font-light uppercase tracking-wider"
+                  style={{ borderRadius: 0 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleScheduleEvent}
+                  isLoading={isScheduling}
+                  className="px-6 py-2 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-all text-xs font-light uppercase tracking-wider"
+                  style={{ borderRadius: 0 }}
+                >
+                  Schedule Now
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]"
+          >
+            <div
+              className={`px-6 py-4 rounded-none border ${
+                notification.type === 'success'
+                  ? 'bg-black border-[#0084ff] text-white'
+                  : 'bg-black border-red-500 text-white'
+              } shadow-lg min-w-[300px] max-w-md`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-1 h-full ${notification.type === 'success' ? 'bg-[#0084ff]' : 'bg-red-500'}`} />
+                <div className="flex-1">
+                  <p className="text-sm font-light">{notification.message}</p>
+                </div>
+                <button
+                  onClick={() => setNotification(null)}
+                  className="text-white/40 hover:text-white transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
