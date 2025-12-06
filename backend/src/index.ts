@@ -56,6 +56,14 @@ async function generateMessageResponse(
 ): Promise<string> {
   console.log(`\n🔮 Processing message from ${phoneNumber}:`);
   console.log(`   "${messageBody}"`);
+  console.log(`   Message ID: ${messageId}`);
+  console.log(`   Message length: ${messageBody.length} chars`);
+
+  // Validate message body
+  if (!messageBody || typeof messageBody !== 'string' || messageBody.trim().length === 0) {
+    console.error('   ⚠️ Invalid or empty message body');
+    return "Hey! I didn't catch that. Can you send that again? 😅";
+  }
 
   // Check rate limit
   if (isRateLimited(phoneNumber)) {
@@ -128,24 +136,42 @@ async function generateMessageResponse(
     
     // Generate response
     let response: string;
-    if (isNewUser && !messageBody.toLowerCase().includes('recommend')) {
-      response = generateWelcomeMessage(profile?.display_name || undefined);
-    } else {
-      response = await generateResponse(messageBody, history, profile, spots, polymarketContext);
+    console.log(`   🔄 Generating response (isNewUser: ${isNewUser}, message: "${messageBody.substring(0, 50)}...")`);
+    
+    try {
+      if (isNewUser && !messageBody.toLowerCase().includes('recommend')) {
+        console.log('   📝 Using welcome message');
+        response = generateWelcomeMessage(profile?.display_name || undefined);
+      } else {
+        console.log('   🤖 Calling OpenAI to generate response...');
+        response = await generateResponse(messageBody, history, profile, spots, polymarketContext);
+        console.log(`   ✅ OpenAI response received (${response.length} chars)`);
+      }
+
+      // Ensure response is valid
+      if (!response || typeof response !== 'string') {
+        console.error('   ⚠️ Invalid response from generateResponse, using fallback');
+        response = "Hey! I'm here but having trouble with that. Can you try rephrasing? 😅";
+      }
+
+      // Save assistant response
+      console.log('   💾 Saving assistant response to database...');
+      await addMessage(conversation.id, 'assistant', response, {
+        intent,
+        city,
+        spots_count: spots.length,
+        openai_used: isOpenAIConfigured(),
+        prediction_topic: predictionTopic,
+        polymarket_markets: polymarketContext?.markets.length || 0,
+      });
+      console.log('   ✅ Response saved');
+
+      console.log(`   ✅ Final response: "${response.substring(0, 50)}..."`);
+      return response;
+    } catch (responseError) {
+      console.error('   ❌ Error in response generation:', responseError);
+      throw responseError; // Re-throw to be caught by outer catch
     }
-
-    // Save assistant response
-    await addMessage(conversation.id, 'assistant', response, {
-      intent,
-      city,
-      spots_count: spots.length,
-      openai_used: isOpenAIConfigured(),
-      prediction_topic: predictionTopic,
-      polymarket_markets: polymarketContext?.markets.length || 0,
-    });
-
-    console.log(`   ✅ Response: "${response.substring(0, 50)}..."`);
-    return response;
 
   } catch (error) {
     console.error('   ❌ Error processing message:', error);
@@ -159,12 +185,29 @@ async function generateMessageResponse(
 async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<void> {
   const { from, body, messageId, chatId } = message;
   
-  // Generate response
-  const response = await generateMessageResponse(from, body, messageId);
+  let response: string;
+  
+  try {
+    // Generate response
+    response = await generateMessageResponse(from, body, messageId);
+    
+    // Ensure we have a valid response
+    if (!response || typeof response !== 'string' || response.trim().length === 0) {
+      console.error('   ⚠️ Generated response is empty or invalid, using fallback');
+      response = "Hey! I'm here but having trouble processing that. Can you try rephrasing? 😅";
+    }
+  } catch (error) {
+    console.error('   ❌ Error generating response:', error);
+    response = "Oops! Something went wrong on my end. Try again in a bit! 🙏";
+  }
 
   // Show typing indicator while "typing"
   if (chatId) {
-    await startTypingIndicator(chatId);
+    try {
+      await startTypingIndicator(chatId);
+    } catch (error) {
+      console.log('   ⚠️ Could not start typing indicator:', error);
+    }
   }
 
   // Small delay to simulate typing (optional, for UX)
@@ -172,45 +215,54 @@ async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<vo
 
   // Stop typing indicator
   if (chatId) {
-    await stopTypingIndicator(chatId);
+    try {
+      await stopTypingIndicator(chatId);
+    } catch (error) {
+      console.log('   ⚠️ Could not stop typing indicator:', error);
+    }
   }
 
   // Send response via REST API
   console.log(`\n📤 Sending response to ${from} (chat: ${chatId})`);
+  console.log(`   Response: "${response.substring(0, 100)}${response.length > 100 ? '...' : ''}"`);
   
-  if (chatId) {
-    // Use existing chat_id to reply
-    const result = await sendMessageToChat(chatId, response);
-    if (result.success) {
-      console.log(`   ✅ Response sent via REST API to chat ${chatId}`);
+  try {
+    if (chatId) {
+      // Use existing chat_id to reply
+      const result = await sendMessageToChat(chatId, response);
+      if (result.success) {
+        console.log(`   ✅ Response sent via REST API to chat ${chatId}`);
+      } else {
+        console.error(`   ❌ Failed to send response: ${result.error}`);
+        
+        // Fallback: try creating a new chat
+        console.log('   🔄 Trying fallback: create new chat...');
+        const fallbackResult = await createChatAndSendMessage(
+          kafkaConfig.senderNumber,
+          from,
+          response
+        );
+        if (fallbackResult.success) {
+          console.log(`   ✅ Response sent via new chat ${fallbackResult.chatId}`);
+        } else {
+          console.error(`   ❌ Fallback also failed: ${fallbackResult.error}`);
+        }
+      }
     } else {
-      console.error(`   ❌ Failed to send response: ${result.error}`);
-      
-      // Fallback: try creating a new chat
-      console.log('   🔄 Trying fallback: create new chat...');
-      const fallbackResult = await createChatAndSendMessage(
+      // No chat_id, create new chat
+      const result = await createChatAndSendMessage(
         kafkaConfig.senderNumber,
         from,
         response
       );
-      if (fallbackResult.success) {
-        console.log(`   ✅ Response sent via new chat ${fallbackResult.chatId}`);
+      if (result.success) {
+        console.log(`   ✅ Response sent via new chat ${result.chatId}`);
       } else {
-        console.error(`   ❌ Fallback also failed: ${fallbackResult.error}`);
+        console.error(`   ❌ Failed to send response: ${result.error}`);
       }
     }
-  } else {
-    // No chat_id, create new chat
-    const result = await createChatAndSendMessage(
-      kafkaConfig.senderNumber,
-      from,
-      response
-    );
-    if (result.success) {
-      console.log(`   ✅ Response sent via new chat ${result.chatId}`);
-    } else {
-      console.error(`   ❌ Failed to send response: ${result.error}`);
-    }
+  } catch (error) {
+    console.error('   ❌ Error sending response via REST API:', error);
   }
 }
 

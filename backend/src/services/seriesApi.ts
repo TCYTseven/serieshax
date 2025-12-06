@@ -190,6 +190,74 @@ export async function markChatAsRead(chatId: string): Promise<boolean> {
 }
 
 /**
+ * Get chat messages for a chat (polling fallback)
+ * Use this to check for new messages if Kafka isn't working
+ */
+export async function getChatMessages(
+  chatId: string,
+  limit: number = 50
+): Promise<{ success: boolean; messages?: any[]; error?: string }> {
+  const apiKey = process.env.SERIES_API_KEY;
+  
+  if (!apiKey) {
+    return { success: false, error: 'SERIES_API_KEY not configured' };
+  }
+
+  const url = `${SERIES_API_BASE_URL}/api/chats/${chatId}/chat_messages?limit=${limit}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const data = await response.json() as any;
+    return { success: true, messages: Array.isArray(data) ? data : (data?.messages || []) };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * List all chats (to find chats with new messages)
+ */
+export async function listChats(): Promise<{ success: boolean; chats?: any[]; error?: string }> {
+  const apiKey = process.env.SERIES_API_KEY;
+  
+  if (!apiKey) {
+    return { success: false, error: 'SERIES_API_KEY not configured' };
+  }
+
+  const url = `${SERIES_API_BASE_URL}/api/chats`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const data = await response.json() as any;
+    return { success: true, chats: Array.isArray(data) ? data : (data?.chats || []) };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Check if Series API is configured
  */
 export function isSeriesApiConfigured(): boolean {
