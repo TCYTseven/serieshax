@@ -58,9 +58,9 @@ class SeriesConsumer {
       console.log(`📥 Subscribing to topic: ${kafkaConfig.topic}`);
       await this.consumer.subscribe({ 
         topic: kafkaConfig.topic, 
-        fromBeginning: true  // Get all messages including old ones for testing
+        fromBeginning: false  // Only process new messages, skip historical
       });
-      console.log('✅ Subscribed to topic (fromBeginning: true)');
+      console.log('✅ Subscribed to topic (fromBeginning: false - new messages only)');
 
       this.isRunning = true;
 

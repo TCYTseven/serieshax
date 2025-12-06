@@ -5,14 +5,20 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
+    "dev:robust": "ts-node src/index-robust.ts",
+    "dev:simple": "ts-node src/index-simple.ts",
+    "dev:server": "ts-node src/index-server.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test:producer": "ts-node src/kafka/test-producer.ts",
     "test:connection": "ts-node src/test-connection.ts",
     "test:services": "ts-node src/test-services.ts",
     "test:phase3": "ts-node src/test-phase3.ts",
+    "test:phase3.6": "ts-node src/test-phase3.6.ts",
     "debug:consumer": "ts-node src/debug-consumer.ts",
-    "test:polymarket": "ts-node src/test-polymarket.ts"
+    "test:polymarket": "ts-node src/test-polymarket.ts",
+    "test:oracle": "ts-node src/test-oracle.ts",
+    "test:event-agent": "ts-node src/test-event-agent.ts"
   },
   "keywords": [
     "series",
@@ -24,12 +30,16 @@
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.21.0",
     "kafkajs": "^2.2.4",
     "openai": "^4.67.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.7.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"

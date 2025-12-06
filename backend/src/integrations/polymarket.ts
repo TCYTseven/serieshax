@@ -1,6 +1,6 @@
 /**
- * Polymarket MCP Integration
- * Wraps Polymarket MCP tools for prediction market context extraction
+ * Polymarket Integration - REAL API
+ * Fetches live prediction market data from Polymarket's public API
  */
 
 // ============================================================================
@@ -12,12 +12,11 @@ export interface PolymarketMarket {
   question: string;
   description: string;
   probability: number;      // 0-1, current YES price
-  volume24h?: number;
   volume: number;
-  isHot: boolean;           // High activity
+  volume24h?: number;
+  isHot: boolean;
   category?: string;
   endDate?: string;
-  tokens?: string[];
   slug?: string;
   closed: boolean;
 }
@@ -26,14 +25,14 @@ export interface TopPrediction {
   question: string;
   probability: number;
   confidence: 'low' | 'medium' | 'high';
-  favoredOutcome?: string;  // For sports: who is favored to win
+  favoredOutcome?: string;
 }
 
 export interface PolymarketContext {
   topic: string;
   markets: PolymarketMarket[];
   topPrediction: TopPrediction | null;
-  trendingScore: number;      // 0-100
+  trendingScore: number;
   suggestedIcebreaker?: string;
   sportsPrediction?: {
     event: string;
@@ -47,6 +46,36 @@ interface CacheEntry {
   context: PolymarketContext;
   timestamp: number;
 }
+
+// Raw API response types
+interface PolymarketAPIMarket {
+  condition_id: string;
+  question_id?: string;
+  question: string;
+  description?: string;
+  market_slug?: string;
+  end_date_iso?: string;
+  game_start_time?: string;
+  tokens?: Array<{
+    token_id: string;
+    outcome: string;
+    price?: number;
+  }>;
+  outcomePrices?: string;  // JSON string like "[0.65, 0.35]"
+  volume?: number;
+  volume_num?: number;
+  liquidity?: number;
+  active?: boolean;
+  closed?: boolean;
+  accepting_orders?: boolean;
+}
+
+// ============================================================================
+// CONFIG
+// ============================================================================
+
+const POLYMARKET_API_BASE = 'https://gamma-api.polymarket.com';
+const CLOB_API_BASE = 'https://clob.polymarket.com';
 
 // ============================================================================
 // CACHE
@@ -79,209 +108,131 @@ function setCachedContext(topic: string, context: PolymarketContext): void {
 }
 
 // ============================================================================
-// MCP TOOL WRAPPERS
+// API FUNCTIONS
 // ============================================================================
 
 /**
- * These functions simulate what would happen when calling the MCP tools.
- * In production, these would be replaced with actual MCP tool calls.
- * For now, we'll create a mock implementation that can be swapped out.
+ * Fetch markets from Polymarket Gamma API
  */
-
-interface RawMarketData {
-  condition_id: string;
-  description: string;
-  tokens: string;
-  slug: string;
-  volume: string;
-  closed: boolean;
-  end_date?: string;
-  category?: string;
+async function fetchMarketsFromAPI(searchTerm?: string): Promise<PolymarketAPIMarket[]> {
+  try {
+    // Try the events endpoint which has better data - fetch more for better coverage
+    let url = `${POLYMARKET_API_BASE}/events?closed=false&limit=200`;
+    
+    console.log(`📊 Polymarket API: Fetching from ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.log(`📊 Polymarket API: Events endpoint failed (${response.status}), trying markets endpoint`);
+      // Fallback to markets endpoint
+      url = `${POLYMARKET_API_BASE}/markets?closed=false&limit=100`;
+      const fallbackResponse = await fetch(url);
+      if (!fallbackResponse.ok) {
+        throw new Error(`API returned ${fallbackResponse.status}`);
+      }
+      const data = await fallbackResponse.json();
+      return Array.isArray(data) ? data : [];
+    }
+    
+    const events = await response.json();
+    
+    // Events contain nested markets
+    const markets: PolymarketAPIMarket[] = [];
+    if (Array.isArray(events)) {
+      for (const event of events) {
+        if (event.markets && Array.isArray(event.markets)) {
+          markets.push(...event.markets);
+        } else {
+          // Event itself might be a market
+          markets.push(event);
+        }
+      }
+    }
+    
+    return markets;
+  } catch (error) {
+    console.error('📊 Polymarket API error:', error);
+    return [];
+  }
 }
 
-// Mock data store - in production this would call actual MCP tools
-let marketDataStore: RawMarketData[] = [];
-
 /**
- * Fetch markets from Polymarket MCP
- * This simulates the list-markets MCP tool
+ * Parse probability from market data
  */
-export async function fetchMarkets(options?: {
-  status?: 'active' | 'resolved';
-  limit?: number;
-  offset?: number;
-}): Promise<RawMarketData[]> {
-  // In production, this would call the MCP tool
-  // For now, return mock data that represents typical Polymarket markets
-  
-  const mockMarkets: RawMarketData[] = [
-    // Sports markets
-    {
-      condition_id: 'knicks-playoffs-2025',
-      description: 'Will the New York Knicks make the 2025 NBA Playoffs? This market resolves to "Yes" if the Knicks qualify for the playoffs.',
-      tokens: 'NBA: Knicks Playoffs 2025',
-      slug: 'knicks-playoffs-2025',
-      volume: '$125,000',
-      closed: false,
-      category: 'Sports'
-    },
-    {
-      condition_id: 'knicks-vs-celtics-dec-2025',
-      description: 'In the upcoming NBA game: If the New York Knicks win, the market resolves to "Knicks". If the Boston Celtics win, the market resolves to "Celtics".',
-      tokens: 'NBA: New York Knicks vs. Boston Celtics',
-      slug: 'nba-knicks-celtics-2025',
-      volume: '$45,000',
-      closed: false,
-      category: 'Sports'
-    },
-    {
-      condition_id: 'lakers-playoffs-2025',
-      description: 'Will the Los Angeles Lakers make the 2025 NBA Playoffs?',
-      tokens: 'NBA: Lakers Playoffs 2025',
-      slug: 'lakers-playoffs-2025',
-      volume: '$89,000',
-      closed: false,
-      category: 'Sports'
-    },
-    {
-      condition_id: 'superbowl-2025-chiefs',
-      description: 'Will the Kansas City Chiefs win Super Bowl 2025?',
-      tokens: 'NFL: Chiefs Super Bowl 2025',
-      slug: 'chiefs-superbowl-2025',
-      volume: '$500,000',
-      closed: false,
-      category: 'Sports'
-    },
-    // Crypto markets
-    {
-      condition_id: 'btc-100k-2025',
-      description: 'Will Bitcoin reach $100,000 by end of 2025?',
-      tokens: 'Bitcoin $100K 2025',
-      slug: 'btc-100k-2025',
-      volume: '$2,500,000',
-      closed: false,
-      category: 'Crypto'
-    },
-    {
-      condition_id: 'eth-10k-2025',
-      description: 'Will Ethereum reach $10,000 by end of 2025?',
-      tokens: 'Ethereum $10K 2025',
-      slug: 'eth-10k-2025',
-      volume: '$1,200,000',
-      closed: false,
-      category: 'Crypto'
-    },
-    // Politics
-    {
-      condition_id: 'trump-2028',
-      description: 'Will Donald Trump run for president in 2028?',
-      tokens: 'Trump 2028 Run',
-      slug: 'trump-2028-run',
-      volume: '$800,000',
-      closed: false,
-      category: 'Politics'
-    },
-    // Entertainment
-    {
-      condition_id: 'oscars-best-picture-2025',
-      description: 'Will "Oppenheimer" win Best Picture at the 2025 Oscars?',
-      tokens: 'Oscars Best Picture 2025',
-      slug: 'oscars-best-picture-2025',
-      volume: '$150,000',
-      closed: false,
-      category: 'Entertainment'
-    },
-  ];
-
-  marketDataStore = mockMarkets;
-  
-  const limit = options?.limit || 10;
-  const offset = options?.offset || 0;
-  
-  let filtered = mockMarkets;
-  if (options?.status === 'active') {
-    filtered = mockMarkets.filter(m => !m.closed);
-  } else if (options?.status === 'resolved') {
-    filtered = mockMarkets.filter(m => m.closed);
+function parseProbability(market: PolymarketAPIMarket): number {
+  // Try outcomePrices first (JSON string like "[0.65, 0.35]")
+  if (market.outcomePrices) {
+    try {
+      const prices = JSON.parse(market.outcomePrices);
+      if (Array.isArray(prices) && prices.length > 0) {
+        return parseFloat(prices[0]) || 0.5;
+      }
+    } catch {
+      // Ignore parse errors
+    }
   }
   
-  return filtered.slice(offset, offset + limit);
-}
-
-/**
- * Get market prices
- * Returns mock probability data
- */
-export async function getMarketPrices(marketId: string): Promise<{
-  probability: number;
-  volume24h?: number;
-} | null> {
-  // Mock probability data based on market ID
-  const mockPrices: Record<string, { probability: number; volume24h: number }> = {
-    'knicks-playoffs-2025': { probability: 0.72, volume24h: 15000 },
-    'knicks-vs-celtics-dec-2025': { probability: 0.45, volume24h: 8000 },
-    'lakers-playoffs-2025': { probability: 0.65, volume24h: 12000 },
-    'superbowl-2025-chiefs': { probability: 0.28, volume24h: 50000 },
-    'btc-100k-2025': { probability: 0.58, volume24h: 250000 },
-    'eth-10k-2025': { probability: 0.35, volume24h: 80000 },
-    'trump-2028': { probability: 0.42, volume24h: 45000 },
-    'oscars-best-picture-2025': { probability: 0.15, volume24h: 10000 },
-  };
+  // Try tokens array
+  if (market.tokens && market.tokens.length > 0) {
+    const yesToken = market.tokens.find(t => 
+      t.outcome?.toLowerCase() === 'yes' || t.outcome?.toLowerCase().includes('yes')
+    );
+    if (yesToken?.price) {
+      return yesToken.price;
+    }
+    // Just use first token price
+    if (market.tokens[0]?.price) {
+      return market.tokens[0].price;
+    }
+  }
   
-  return mockPrices[marketId] || null;
+  return 0.5; // Default to 50%
 }
 
 /**
- * Get market history
+ * Parse volume from market data
  */
-export async function getMarketHistory(
-  marketId: string,
-  timeframe: '1d' | '7d' | '30d' | 'all' = '7d'
-): Promise<{ priceChange: number; volumeChange: number } | null> {
-  // Mock history - shows trend
-  const mockHistory: Record<string, { priceChange: number; volumeChange: number }> = {
-    'knicks-playoffs-2025': { priceChange: 0.05, volumeChange: 0.15 },
-    'btc-100k-2025': { priceChange: 0.12, volumeChange: 0.35 },
-    'superbowl-2025-chiefs': { priceChange: -0.08, volumeChange: 0.20 },
-  };
-  
-  return mockHistory[marketId] || { priceChange: 0, volumeChange: 0 };
-}
-
-// ============================================================================
-// CONTEXT EXTRACTION LOGIC
-// ============================================================================
-
-/**
- * Parse volume string to number
- */
-function parseVolume(volumeStr: string): number {
-  const cleaned = volumeStr.replace(/[$,]/g, '');
-  return parseFloat(cleaned) || 0;
+function parseVolume(market: PolymarketAPIMarket): number {
+  if (market.volume_num) return market.volume_num;
+  if (market.volume) return market.volume;
+  if (market.liquidity) return market.liquidity;
+  return 0;
 }
 
 /**
- * Check if a market is relevant to a topic
+ * Check if market is relevant to search topic
  */
-function isMarketRelevant(market: RawMarketData, topic: string): boolean {
+function isMarketRelevant(market: PolymarketAPIMarket, topic: string): boolean {
   const topicLower = topic.toLowerCase();
   const searchFields = [
-    market.description,
-    market.tokens,
-    market.slug,
-    market.category || '',
+    market.question || '',
+    market.description || '',
+    market.market_slug || '',
   ].map(s => s.toLowerCase());
   
-  // Check for direct matches
+  // Direct match
   if (searchFields.some(field => field.includes(topicLower))) {
     return true;
   }
   
-  // Check for common aliases
+  // Common aliases for sports teams
   const aliases: Record<string, string[]> = {
-    'knicks': ['new york knicks', 'nyk', 'knicks'],
-    'lakers': ['los angeles lakers', 'la lakers', 'lal'],
-    'celtics': ['boston celtics', 'bos'],
+    'knicks': ['new york knicks', 'nyk', 'knicks', 'ny knicks'],
+    'lakers': ['los angeles lakers', 'la lakers', 'lakers', 'lal'],
+    'celtics': ['boston celtics', 'celtics', 'bos'],
+    'warriors': ['golden state warriors', 'warriors', 'gsw'],
+    'nets': ['brooklyn nets', 'nets', 'bkn'],
+    'heat': ['miami heat', 'heat', 'mia'],
+    'bulls': ['chicago bulls', 'bulls', 'chi'],
+    'mavericks': ['dallas mavericks', 'mavs', 'mavericks', 'dal'],
+    'chiefs': ['kansas city chiefs', 'chiefs', 'kc'],
+    'eagles': ['philadelphia eagles', 'eagles', 'philly'],
+    'cowboys': ['dallas cowboys', 'cowboys'],
     'bitcoin': ['btc', 'bitcoin'],
     'ethereum': ['eth', 'ethereum'],
     'trump': ['donald trump', 'trump'],
@@ -293,14 +244,15 @@ function isMarketRelevant(market: RawMarketData, topic: string): boolean {
   );
 }
 
+// ============================================================================
+// CONTEXT EXTRACTION
+// ============================================================================
+
 /**
- * Calculate if a market is "hot" based on volume and activity
+ * Calculate if market is "hot" based on volume
  */
-function isMarketHot(volume: number, volume24h?: number): boolean {
-  // Market is hot if:
-  // - Total volume > $50,000
-  // - OR 24h volume > $10,000
-  return volume > 50000 || (volume24h !== undefined && volume24h > 10000);
+function isMarketHot(volume: number): boolean {
+  return volume > 50000;
 }
 
 /**
@@ -314,13 +266,13 @@ function calculateTrendingScore(markets: PolymarketMarket[]): number {
   // Factor 1: Number of relevant markets (max 30 points)
   score += Math.min(markets.length * 10, 30);
   
-  // Factor 2: Contested markets (probability 40-60%) are interesting (max 30 points)
-  const contestedMarkets = markets.filter(m => m.probability >= 0.4 && m.probability <= 0.6);
-  score += Math.min(contestedMarkets.length * 15, 30);
+  // Factor 2: Contested markets 40-60% (max 30 points)
+  const contested = markets.filter(m => m.probability >= 0.4 && m.probability <= 0.6);
+  score += Math.min(contested.length * 15, 30);
   
   // Factor 3: Hot markets (max 25 points)
-  const hotMarkets = markets.filter(m => m.isHot);
-  score += Math.min(hotMarkets.length * 12, 25);
+  const hot = markets.filter(m => m.isHot);
+  score += Math.min(hot.length * 12, 25);
   
   // Factor 4: Total volume (max 15 points)
   const totalVolume = markets.reduce((sum, m) => sum + m.volume, 0);
@@ -332,18 +284,17 @@ function calculateTrendingScore(markets: PolymarketMarket[]): number {
 }
 
 /**
- * Determine confidence level based on probability
+ * Get confidence level from probability
  */
 function getConfidenceLevel(probability: number): 'low' | 'medium' | 'high' {
-  // Strong predictions (far from 50%) have higher confidence
   const distanceFrom50 = Math.abs(probability - 0.5);
-  if (distanceFrom50 > 0.3) return 'high';      // > 80% or < 20%
-  if (distanceFrom50 > 0.15) return 'medium';   // > 65% or < 35%
-  return 'low';                                  // 35-65%
+  if (distanceFrom50 > 0.3) return 'high';
+  if (distanceFrom50 > 0.15) return 'medium';
+  return 'low';
 }
 
 /**
- * Extract sports prediction from market description
+ * Extract sports prediction from market question
  */
 function extractSportsPrediction(market: PolymarketMarket): {
   event: string;
@@ -351,22 +302,20 @@ function extractSportsPrediction(market: PolymarketMarket): {
   probability: number;
   underdog: string;
 } | null {
-  // Use question for matching, not tokens array
-  const questionText = market.question;
+  const question = market.question;
   
-  // Check if it's a vs. match
-  const vsMatch = questionText.match(/(.+)\s+vs\.?\s+(.+)/i);
+  // Look for "vs" pattern
+  const vsMatch = question.match(/(.+?)\s+vs\.?\s+(.+?)(?:\?|$|\()/i);
   if (vsMatch) {
-    const team1 = vsMatch[1].trim();
-    const team2 = vsMatch[2].trim();
+    const team1 = vsMatch[1].trim().replace(/^Will\s+/i, '').replace(/^the\s+/i, '');
+    const team2 = vsMatch[2].trim().replace(/\s+win.*$/i, '');
     
-    // Probability > 0.5 means team1 is favored (assuming YES = team1 wins)
     const favored = market.probability > 0.5 ? team1 : team2;
     const underdog = market.probability > 0.5 ? team2 : team1;
     const favoredProb = market.probability > 0.5 ? market.probability : (1 - market.probability);
     
     return {
-      event: questionText,
+      event: question,
       favored,
       probability: favoredProb,
       underdog,
@@ -377,29 +326,82 @@ function extractSportsPrediction(market: PolymarketMarket): {
 }
 
 /**
- * Generate icebreaker suggestion
+ * Generate natural icebreaker
  */
 function generateIcebreaker(
   topic: string,
   topPrediction: TopPrediction | null,
   sportsPrediction?: { favored: string; probability: number; underdog: string; event: string }
 ): string | undefined {
+  
   if (sportsPrediction) {
     const pct = Math.round(sportsPrediction.probability * 100);
-    return `Polymarket has ${sportsPrediction.favored} at ${pct}% to beat ${sportsPrediction.underdog} - you think they cover?`;
+    const favored = sportsPrediction.favored.split(' ').pop() || sportsPrediction.favored;
+    const underdog = sportsPrediction.underdog.split(' ').pop() || sportsPrediction.underdog;
+    
+    const options = pct > 65 ? [
+      `yo bettors have ${favored} at ${pct}% over ${underdog}... you buying that?`,
+      `${pct}% on polymarket think ${favored} takes this. trap or lock?`,
+      `markets heavy on ${favored} (${pct}%). what's your read?`,
+    ] : pct >= 45 ? [
+      `${favored} vs ${underdog} is basically a coin flip on polymarket. who you got?`,
+      `markets split on this one - ${favored} slight edge at ${pct}%. thoughts?`,
+    ] : [
+      `${underdog} getting no love at ${100-pct}%... upset brewing?`,
+      `markets sleeping on ${underdog}? only ${100-pct}% odds`,
+    ];
+    
+    return options[Math.floor(Math.random() * options.length)];
   }
   
   if (!topPrediction) return undefined;
   
   const pct = Math.round(topPrediction.probability * 100);
+  const topicLower = topic.toLowerCase();
   
-  if (topPrediction.probability > 0.7) {
-    return `Polymarket is ${pct}% sure on "${topPrediction.question}" - seems like easy money or trap?`;
-  } else if (topPrediction.probability < 0.3) {
-    return `Only ${pct}% think "${topPrediction.question}" will happen - contrarian bet?`;
-  } else {
-    return `"${topPrediction.question}" is at ${pct}% on Polymarket - pretty contested. What's your take?`;
+  // Crypto - make it conversational based on the actual question
+  if (topicLower.includes('bitcoin') || topicLower.includes('btc')) {
+    const question = topPrediction.question.toLowerCase();
+    
+    // Dip markets
+    if (question.includes('dip')) {
+      const priceMatch = topPrediction.question.match(/\$[\d,]+/);
+      const price = priceMatch ? priceMatch[0] : '';
+      return pct > 50 
+        ? `polymarket thinks there's a ${pct}% chance BTC dips to ${price}. you worried or buying the dip?`
+        : `only ${pct}% think bitcoin drops to ${price}. seems like most people are bullish`;
+    }
+    
+    // Price target markets  
+    if (question.includes('reach')) {
+      const priceMatch = topPrediction.question.match(/\$[\d,]+/);
+      const price = priceMatch ? priceMatch[0] : '';
+      return pct > 50
+        ? `${pct}% chance BTC hits ${price} according to polymarket. you think it happens?`
+        : `only ${pct}% give BTC a shot at ${price}. too bearish or realistic?`;
+    }
+    
+    // Generic
+    return pct > 50 
+      ? `polymarket's ${pct}% on this bitcoin play. what's your take?`
+      : `only ${pct}% on this one. contrarian opportunity?`;
   }
+  
+  if (topicLower.includes('eth')) {
+    return `ETH prediction sitting at ${pct}% on polymarket. bullish or nah?`;
+  }
+  
+  // Politics
+  if (topicLower.includes('trump') || topicLower.includes('election')) {
+    return `prediction markets have this at ${pct}%. wild times`;
+  }
+  
+  // Generic
+  return pct > 70 
+    ? `bettors are ${pct}% confident on this. you agree?`
+    : pct < 30
+    ? `only ${pct}% give this a shot. they sleeping?`
+    : `this one's at ${pct}% on polymarket - could go either way`;
 }
 
 // ============================================================================
@@ -407,7 +409,7 @@ function generateIcebreaker(
 // ============================================================================
 
 /**
- * Get Polymarket context for a topic
+ * Get Polymarket context for a topic - fetches REAL data from API
  */
 export async function getPolymarketContext(
   topic: string,
@@ -423,71 +425,98 @@ export async function getPolymarketContext(
     return cached;
   }
   
-  console.log(`📊 Polymarket: Fetching context for "${topic}"`);
+  console.log(`📊 Polymarket: Fetching LIVE data for "${topic}"`);
   
   const limit = options?.limit || 10;
   
   try {
-    // Fetch all active markets
-    const rawMarkets = await fetchMarkets({ status: 'active', limit: 50 });
+    // Fetch real markets from API
+    const rawMarkets = await fetchMarketsFromAPI(topic);
+    console.log(`📊 Polymarket: Got ${rawMarkets.length} total markets from API`);
     
     // Filter for relevant markets
     const relevantMarkets = rawMarkets.filter(m => isMarketRelevant(m, topic));
+    console.log(`📊 Polymarket: ${relevantMarkets.length} markets match "${topic}"`);
     
-    // Enrich with price data
-    const markets: PolymarketMarket[] = await Promise.all(
-      relevantMarkets.slice(0, limit).map(async (raw) => {
-        const prices = await getMarketPrices(raw.condition_id);
-        const volume = parseVolume(raw.volume);
-        
-        return {
-          id: raw.condition_id,
-          question: raw.tokens,
-          description: raw.description,
-          probability: prices?.probability || 0.5,
-          volume24h: prices?.volume24h,
-          volume,
-          isHot: isMarketHot(volume, prices?.volume24h),
-          category: raw.category,
-          endDate: raw.end_date,
-          tokens: raw.tokens ? raw.tokens.split(',').map(t => t.trim()) : [],
-          slug: raw.slug,
-          closed: raw.closed,
-        };
-      })
-    );
-    
-    // Sort by relevance (hot markets first, then by volume)
-    markets.sort((a, b) => {
-      if (a.isHot && !b.isHot) return -1;
-      if (!a.isHot && b.isHot) return 1;
-      return b.volume - a.volume;
+    // Transform ALL relevant markets first (before limiting)
+    const allMarkets: PolymarketMarket[] = relevantMarkets.map(raw => {
+      const probability = parseProbability(raw);
+      const volume = parseVolume(raw);
+      
+      return {
+        id: raw.condition_id || raw.question_id || '',
+        question: raw.question || '',
+        description: raw.description || '',
+        probability,
+        volume,
+        isHot: isMarketHot(volume),
+        category: undefined,
+        endDate: raw.end_date_iso || raw.game_start_time,
+        slug: raw.market_slug,
+        closed: raw.closed || false,
+      };
     });
     
-    // Get top prediction
+    // Sort by "interestingness" - contested markets with HIGH volume are best
+    allMarkets.sort((a, b) => {
+      // Score based on how contested (closer to 50% = more interesting)
+      // Range: 0.15-0.85 is interesting, 0.3-0.7 is very interesting
+      const getContestedScore = (prob: number) => {
+        if (prob < 0.1 || prob > 0.9) return 0; // Too extreme, not interesting
+        if (prob >= 0.3 && prob <= 0.7) return 1; // Very contested
+        return 0.5; // Somewhat contested
+      };
+      
+      const contestedA = getContestedScore(a.probability);
+      const contestedB = getContestedScore(b.probability);
+      
+      // Volume matters a lot - require minimum $10k to be interesting
+      const getVolumeScore = (vol: number) => {
+        if (vol < 10000) return 0;
+        if (vol > 1000000) return 1;
+        return vol / 1000000;
+      };
+      
+      const volumeA = getVolumeScore(a.volume);
+      const volumeB = getVolumeScore(b.volume);
+      
+      // Combined score: must have BOTH contestedness and volume
+      // Multiply them so 0 in either = 0 total
+      const scoreA = contestedA * (0.3 + volumeA * 0.7);
+      const scoreB = contestedB * (0.3 + volumeB * 0.7);
+      
+      return scoreB - scoreA;
+    });
+    
+    // Find most interesting market BEFORE slicing (contested with significant volume)
+    const bestMarket = allMarkets.find(m => 
+      m.probability >= 0.2 && m.probability <= 0.8 && m.volume > 50000
+    ) || allMarkets.find(m => 
+      m.probability >= 0.1 && m.probability <= 0.9 && m.volume > 10000
+    ) || allMarkets[0];
+    
+    // Now slice to limit for return
+    const markets = allMarkets.slice(0, limit);
+    
+    // Extract predictions
     let topPrediction: TopPrediction | null = null;
     let sportsPrediction: PolymarketContext['sportsPrediction'] = undefined;
     
-    if (markets.length > 0) {
-      const topMarket = markets[0];
+    if (bestMarket) {
       topPrediction = {
-        question: topMarket.question,
-        probability: topMarket.probability,
-        confidence: getConfidenceLevel(topMarket.probability),
+        question: bestMarket.question,
+        probability: bestMarket.probability,
+        confidence: getConfidenceLevel(bestMarket.probability),
       };
       
-      // Extract sports prediction if applicable
-      const extracted = extractSportsPrediction(topMarket);
+      const extracted = extractSportsPrediction(bestMarket);
       if (extracted) {
         sportsPrediction = extracted;
         topPrediction.favoredOutcome = extracted.favored;
       }
     }
     
-    // Calculate trending score
     const trendingScore = calculateTrendingScore(markets);
-    
-    // Generate icebreaker
     const suggestedIcebreaker = generateIcebreaker(topic, topPrediction, sportsPrediction);
     
     const context: PolymarketContext = {
@@ -499,17 +528,16 @@ export async function getPolymarketContext(
       sportsPrediction,
     };
     
-    // Cache the result
+    // Cache result
     setCachedContext(topic, context);
     
-    console.log(`📊 Polymarket: Found ${markets.length} markets for "${topic}", trending score: ${trendingScore}`);
+    console.log(`📊 Polymarket: Found ${markets.length} markets, trending: ${trendingScore}`);
     
     return context;
     
   } catch (error) {
     console.error(`📊 Polymarket: Error fetching context for "${topic}":`, error);
     
-    // Return empty context on error
     return {
       topic,
       markets: [],
@@ -520,8 +548,7 @@ export async function getPolymarketContext(
 }
 
 /**
- * Get sports event predictions
- * Specialized function for sports-related queries
+ * Get sports prediction for specific matchup
  */
 export async function getSportsEventPrediction(
   team1: string,
@@ -535,24 +562,21 @@ export async function getSportsEventPrediction(
 } | null> {
   const context = await getPolymarketContext(team1);
   
-  // If team2 is specified, look for head-to-head market
   if (team2) {
     const h2hMarket = context.markets.find(m => 
-      m.description.toLowerCase().includes(team2.toLowerCase())
+      m.question.toLowerCase().includes(team2.toLowerCase())
     );
     
     if (h2hMarket) {
       const prediction = extractSportsPrediction(h2hMarket);
       if (prediction) {
-        return {
-          ...prediction,
-          icebreaker: `Polymarket has ${prediction.favored} at ${Math.round(prediction.probability * 100)}% vs ${prediction.underdog}. Agree?`,
-        };
+        const pct = Math.round(prediction.probability * 100);
+        const icebreaker = `${prediction.favored} vs ${prediction.underdog} - markets have it at ${pct}%. who you got?`;
+        return { ...prediction, icebreaker };
       }
     }
   }
   
-  // Return the sports prediction from context if available
   if (context.sportsPrediction) {
     return {
       ...context.sportsPrediction,
@@ -564,7 +588,7 @@ export async function getSportsEventPrediction(
 }
 
 /**
- * Clear the cache (for testing)
+ * Clear cache
  */
 export function clearPolymarketCache(): void {
   cache.clear();

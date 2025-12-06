@@ -12,3 +12,22 @@ export {
   type PolymarketMarket,
   type TopPrediction,
 } from './polymarket';
+
+// Reddit Integration (Live API)
+export {
+  getRedditContext,
+  findHiddenGems,
+  getLocalSentiment,
+  getTrendingTopics,
+  getSpotRedditData,
+  batchGetSpotRedditData,
+  getPersonalizedRecommendations,
+  clearRedditCache,
+  clearSpotCache,
+  isCitySupported,
+  getSupportedCities,
+  getCitySubreddits,
+  type RedditContext,
+  type RedditPost,
+  type SpotRedditData,
+} from './reddit';

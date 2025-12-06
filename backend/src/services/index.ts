@@ -31,8 +31,41 @@ export {
   type PolymarketContext 
 } from '../integrations/polymarket';
 
+// Re-export Reddit integration (Live API)
+export {
+  getRedditContext,
+  findHiddenGems,
+  getLocalSentiment,
+  getTrendingTopics,
+  getSpotRedditData,
+  batchGetSpotRedditData,
+  getPersonalizedRecommendations,
+  clearRedditCache,
+  isCitySupported,
+  getSupportedCities,
+  type RedditContext,
+  type SpotRedditData,
+} from '../integrations/reddit';
+
 // Rate Limiter
 export * from './rateLimiter';
+
+// Event Creation Agent
+export {
+  createPersonalizedEvents,
+  analyzeUserProfile,
+  fetchPolymarketData,
+  fetchRedditData,
+  generateEventSuggestions,
+  saveEventsToSupabase,
+  type OnboardingProfile,
+  type SearchFilters,
+  type GeneratedEvent,
+  type EventCreationResult,
+  type PersonalityAnalysis,
+  type PolymarketNote,
+  type RedditNote,
+} from './eventCreationAgent';
 
 // Re-export types for convenience
 export type {
