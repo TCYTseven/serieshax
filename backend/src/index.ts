@@ -1,6 +1,8 @@
 import { seriesConsumer } from './kafka/consumer';
 import { kafkaConfig } from './config/kafka';
 import { isSupabaseConfigured } from './config/supabase';
+import { startServer } from './server';
+import { env } from './config/env';
 import {
   getOrCreateUser,
   getUserProfile,
@@ -237,12 +239,17 @@ async function main(): Promise<void> {
     // Start the consumer (no need for producer since we use REST API)
     await seriesConsumer.start();
 
+    // Start HTTP server
+    const port = env.PORT ? parseInt(env.PORT, 10) : 3001;
+    startServer(port);
+
     console.log('\n');
     console.log('═══════════════════════════════════════════════════════════');
     console.log('✅ Social Oracle Backend is running!');
     console.log(`📞 Listening for SMS on: ${kafkaConfig.senderNumber}`);
     console.log(`📡 Kafka topic: ${kafkaConfig.topic}`);
     console.log(`🌐 Sending replies via: Series REST API`);
+    console.log(`🚀 HTTP API server running on port ${port}`);
     console.log('═══════════════════════════════════════════════════════════');
     console.log('\n💡 Send an SMS to the number above to test!\n');
 

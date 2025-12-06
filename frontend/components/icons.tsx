@@ -18,9 +18,9 @@ export const Logo: React.FC<IconSvgProps> = ({
       width={logoSize}
       height={logoSize}
       className="object-contain"
-      {...props}
+    {...props}
     />
-  );
+);
 };
 
 export const DiscordIcon: React.FC<IconSvgProps> = ({

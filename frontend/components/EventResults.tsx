@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Modal, ModalContent, ModalHeader, ModalBody, useDisclosure } from "@heroui/modal";
 import { OnboardingData } from "@/contexts/OnboardingContext";
 import ProfileMenu from "./ProfileMenu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EventResultsProps {
   searchQuery: string;
@@ -287,7 +288,15 @@ const generateEventSuggestions = (
 };
 
 // Event Card Component
-const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewReviews: (event: any) => void }) => {
+const EventCard = ({ 
+  suggestion, 
+  onViewReviews,
+  onActivateAgent 
+}: { 
+  suggestion: any; 
+  onViewReviews: (event: any) => void;
+  onActivateAgent: (event: any) => void;
+}) => {
   return (
     <div className="bg-black border border-white/10 p-8 md:p-10 h-full flex flex-col">
       {/* Image */}
@@ -382,9 +391,7 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewRevie
             </button>
           </div>
           <button
-            onClick={() => {
-              console.log("Activating Event Agent for:", suggestion.name);
-            }}
+            onClick={() => onActivateAgent(suggestion)}
             className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
             style={{ borderRadius: 0 }}
           >
@@ -401,6 +408,7 @@ export default function EventResults({
   filters,
   onboardingData,
 }: EventResultsProps) {
+  const { user } = useAuth();
   const suggestions = generateEventSuggestions(onboardingData, filters);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [startIndex, setStartIndex] = useState(0);
@@ -410,6 +418,34 @@ export default function EventResults({
   const handleViewReviews = (event: any) => {
     setSelectedEvent(event);
     onOpen();
+  };
+
+  const handleActivateAgent = (event: any) => {
+    if (!user) {
+      return;
+    }
+
+    // Fire and forget - don't wait for response
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+    fetch(`${backendUrl}/api/activate-event-agent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event: {
+          name: event.name,
+          type: event.type,
+          description: event.description,
+          price: event.price,
+          distance: event.distance,
+        },
+        userId: user.id,
+      }),
+    }).catch((error) => {
+      // Silently log errors, don't bother user
+      console.error("Error activating event agent:", error);
+    });
   };
 
   const handleNext = (e: React.MouseEvent) => {
@@ -491,7 +527,11 @@ export default function EventResults({
                           key={`${event.id}-${startIndex}`}
                           className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
                         >
-                          <EventCard suggestion={event} onViewReviews={handleViewReviews} />
+                          <EventCard 
+                            suggestion={event} 
+                            onViewReviews={handleViewReviews}
+                            onActivateAgent={handleActivateAgent}
+                          />
                         </div>
                       );
                     })}

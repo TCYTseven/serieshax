@@ -69,7 +69,7 @@ export default function LandingPage() {
           }}
           animate={{
             backgroundPosition: ['0% 0%', '80px 80px'],
-          }}
+                }}
           transition={{
             duration: 20,
             repeat: Infinity,
@@ -83,18 +83,18 @@ export default function LandingPage() {
           const startX = Math.random() * 100;
           const startY = Math.random() * 100;
           const rotation = Math.random() * 360;
-          
-          return (
-            <motion.div
+                  
+                  return (
+                    <motion.div
               key={`shape-${i}`}
               className="absolute border border-[#0084ff]/10"
-              style={{
+                      style={{
                 width: `${size}px`,
                 height: `${size}px`,
                 left: `${startX}%`,
                 top: `${startY}%`,
                 rotate: rotation,
-              }}
+                      }}
               animate={{
                 rotate: [rotation, rotation + 360],
                 opacity: [0.05, 0.15, 0.05],
@@ -105,10 +105,10 @@ export default function LandingPage() {
                 repeat: Infinity,
                 delay: i * 0.5,
                 ease: "easeInOut",
-              }}
-            />
-          );
-        })}
+                      }}
+                    />
+                  );
+                })}
 
         {/* Enhanced Floating Particles */}
         {isClient &&
@@ -117,19 +117,19 @@ export default function LandingPage() {
             const startX = Math.random() * 100;
             const startY = Math.random() * 100;
             const delay = Math.random() * 5;
-            
-            return (
-              <motion.div
+                  
+                  return (
+                    <motion.div
                 key={`particle-${i}`}
                 className="absolute rounded-full"
-                style={{
+                      style={{
                   width: `${size}px`,
                   height: `${size}px`,
                   left: `${startX}%`,
                   top: `${startY}%`,
                   background: `radial-gradient(circle, rgba(0, 132, 255, ${0.3 + Math.random() * 0.4}) 0%, transparent 70%)`,
-                }}
-                animate={{
+                      }}
+                      animate={{
                   y: [
                     startY * window.innerHeight * 0.01,
                     (startY - 50) * window.innerHeight * 0.01,
@@ -142,16 +142,16 @@ export default function LandingPage() {
                   ],
                   opacity: [0, 0.6, 0],
                   scale: [0.5, 1.5, 0.5],
-                }}
-                transition={{
+                      }}
+                      transition={{
                   duration: Math.random() * 8 + 6,
-                  repeat: Infinity,
+                        repeat: Infinity,
                   delay: delay,
-                  ease: "easeInOut",
-                }}
-              />
-            );
-          })}
+                        ease: "easeInOut",
+                      }}
+                    />
+                  );
+                })}
 
         {/* Animated Light Rays */}
         {isClient && Array.from({ length: 6 }).map((_, i) => {
@@ -159,24 +159,24 @@ export default function LandingPage() {
           const delay = i * 0.3;
           
           return (
-            <motion.div
+              <motion.div
               key={`ray-${i}`}
               className="absolute top-1/2 left-1/2 w-px h-[200%] origin-top"
               style={{
                 transform: `translate(-50%, -50%) rotate(${angle}deg)`,
                 background: `linear-gradient(to bottom, transparent, rgba(0, 132, 255, 0.1), transparent)`,
               }}
-              animate={{
+                animate={{
                 opacity: [0, 0.3, 0],
                 scaleY: [0.5, 1, 0.5],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
                 delay: delay,
-                ease: "easeInOut",
-              }}
-            />
+                  ease: "easeInOut",
+                }}
+              />
           );
         })}
 
@@ -184,29 +184,29 @@ export default function LandingPage() {
         {isClient && Array.from({ length: 3 }).map((_, i) => {
           const size = 300 + (i * 200);
           const delay = i * 1.5;
-          
-          return (
-            <motion.div
+            
+            return (
+              <motion.div
               key={`ring-${i}`}
               className="absolute top-1/2 left-1/2 border border-[#0084ff]/20 rounded-full"
-              style={{
-                width: `${size}px`,
-                height: `${size}px`,
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
                 transform: 'translate(-50%, -50%)',
-              }}
-              animate={{
+                }}
+                animate={{
                 scale: [1, 1.5, 1],
                 opacity: [0.1, 0.3, 0.1],
-              }}
-              transition={{
+                }}
+                transition={{
                 duration: 6,
-                repeat: Infinity,
+                  repeat: Infinity,
                 delay: delay,
-                ease: "easeInOut",
-              }}
-            />
-          );
-        })}
+                  ease: "easeInOut",
+                }}
+              />
+            );
+          })}
 
         {/* Radial Gradient Overlay */}
         <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/40 to-black" />
@@ -275,7 +275,7 @@ export default function LandingPage() {
             className="text-5xl md:text-6xl lg:text-7xl font-light text-white leading-[1.05] tracking-tight mb-6"
           >
             <span className="bg-gradient-to-r from-white via-[#e0e7ff] to-white bg-clip-text text-transparent">
-              Social Oracle
+            Social Oracle
             </span>
           </motion.h1>
 
@@ -304,8 +304,8 @@ export default function LandingPage() {
                 className="bg-gradient-to-r from-[#0084ff] to-[#00a0ff] text-white font-medium px-10 py-5 text-sm uppercase tracking-wider"
                 size="lg"
                 radius="lg"
-              >
-                Continue
+                >
+                  Continue
               </Button>
             </motion.div>
           </motion.div>

@@ -34,6 +34,9 @@ const envSchema = z.object({
 
   // Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  
+  // HTTP Server
+  PORT: z.string().optional(),
 });
 
 /**

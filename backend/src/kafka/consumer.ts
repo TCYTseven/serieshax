@@ -1,4 +1,4 @@
-import { Consumer, EachMessagePayload } from 'kafkajs';
+import { Consumer, EachMessagePayload, Kafka } from 'kafkajs';
 import { kafka, kafkaConfig } from '../config/kafka';
 import { 
   KafkaMessagePayload, 
@@ -23,12 +23,11 @@ class SeriesConsumer {
   private messageHandler: MessageHandler | null = null;
 
   constructor() {
-    // Use a unique consumer group to avoid partition conflicts with other consumers
-    const uniqueGroupId = `${kafkaConfig.consumerGroup}-${Date.now()}`;
-    console.log(`📡 Using consumer group: ${uniqueGroupId}`);
+    // Use stable consumer group ID so Kafka tracks offset and only processes new messages
+    console.log(`📡 Using consumer group: ${kafkaConfig.consumerGroup}`);
     
     this.consumer = kafka.consumer({ 
-      groupId: uniqueGroupId,
+      groupId: kafkaConfig.consumerGroup,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
     });
@@ -58,9 +57,31 @@ class SeriesConsumer {
       console.log(`📥 Subscribing to topic: ${kafkaConfig.topic}`);
       await this.consumer.subscribe({ 
         topic: kafkaConfig.topic, 
-        fromBeginning: true  // Get all messages including old ones for testing
+        fromBeginning: false  // Only process new messages, not old ones
       });
-      console.log('✅ Subscribed to topic (fromBeginning: true)');
+      console.log('✅ Subscribed to topic (fromBeginning: false - only new messages)');
+      
+      // Log consumer group offset info
+      const admin = kafka.admin();
+      await admin.connect();
+      try {
+        const groupOffsets = await admin.fetchOffsets({
+          groupId: kafkaConfig.consumerGroup,
+        });
+        console.log(`\n📊 Current consumer group offsets:`);
+        const topicOffsets = groupOffsets.find(g => g.topic === kafkaConfig.topic);
+        if (topicOffsets) {
+          console.log(`   Topic: ${topicOffsets.topic}`);
+          topicOffsets.partitions.forEach(p => {
+            console.log(`   Partition ${p.partition}: offset ${p.offset}`);
+          });
+        } else {
+          console.log(`   No offsets found for topic ${kafkaConfig.topic} (will start from latest)`);
+        }
+      } catch (err) {
+        console.log(`ℹ️ Could not fetch offsets (group may be new): ${err}`);
+      }
+      await admin.disconnect();
 
       this.isRunning = true;
 
@@ -71,6 +92,18 @@ class SeriesConsumer {
       });
 
       console.log('🚀 Consumer is running and waiting for messages...');
+      console.log(`   Consumer Group: ${kafkaConfig.consumerGroup}`);
+      console.log(`   Topic: ${kafkaConfig.topic}`);
+      console.log(`   Listening for NEW messages only (fromBeginning: false)`);
+      
+      // Set up periodic heartbeat to show consumer is alive
+      const heartbeatInterval = setInterval(() => {
+        console.log('💓 Consumer heartbeat - still listening for messages...');
+      }, 30000); // Every 30 seconds
+      
+      // Clean up interval on shutdown (though this won't run if process exits)
+      process.on('SIGINT', () => clearInterval(heartbeatInterval));
+      process.on('SIGTERM', () => clearInterval(heartbeatInterval));
     } catch (error) {
       console.error('❌ Failed to start consumer:', error);
       throw error;
@@ -145,6 +178,7 @@ class SeriesConsumer {
       else {
         console.log(`ℹ️ Non-SMS event received: ${eventType}`);
         console.log(`   Data keys: ${Object.keys(parsedMessage.data || {}).join(', ')}`);
+        console.log(`   Full message: ${JSON.stringify(parsedMessage, null, 2).substring(0, 500)}`);
       }
     } catch (error) {
       console.error('❌ Error processing message:', error);
