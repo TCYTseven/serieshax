@@ -21,7 +21,15 @@ interface EventResultsProps {
 }
 
 // Event Card Component
-const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; onViewReviews: (event: GeneratedEvent) => void }) => {
+const EventCard = ({ 
+  suggestion, 
+  onViewReviews,
+  onActivateEvent
+}: { 
+  suggestion: GeneratedEvent; 
+  onViewReviews: (event: GeneratedEvent) => void;
+  onActivateEvent: (event: GeneratedEvent) => void;
+}) => {
   return (
     <div className="bg-black border border-white/10 p-6 md:p-8 h-full flex flex-col">
       {/* Image */}
@@ -146,9 +154,7 @@ const EventCard = ({ suggestion, onViewReviews }: { suggestion: GeneratedEvent; 
             </button>
           </div>
           <button
-            onClick={() => {
-              console.log("Activating Event Agent for:", suggestion.locationName);
-            }}
+            onClick={() => onActivateEvent(suggestion)}
             className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
             style={{ borderRadius: 0 }}
           >
@@ -170,6 +176,13 @@ export default function EventResults({
   const [startIndex, setStartIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
   const { isOpen, onOpen, onClose } = useDisclosure();
+  
+  // New state for scheduling (from main branch)
+  const { isOpen: isScheduleOpen, onOpen: onScheduleOpen, onClose: onScheduleClose } = useDisclosure();
+  const [eventToSchedule, setEventToSchedule] = useState<GeneratedEvent | null>(null);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
   const apiCalledRef = useRef(false); // Prevent multiple API calls
   const isLoadingRef = useRef(false); // Track if API call is in progress
 
@@ -265,7 +278,7 @@ export default function EventResults({
     onOpen();
   };
 
-  const handleActivateEvent = (event: any) => {
+  const handleActivateEvent = (event: GeneratedEvent) => {
     setEventToSchedule(event);
     onScheduleOpen();
   };
@@ -276,14 +289,15 @@ export default function EventResults({
     setIsScheduling(true);
     try {
       // Use the Supabase event data if available, otherwise use the transformed event
-      const eventData = eventToSchedule.supabaseEventData || eventToSchedule;
+      // Cast to any to access potential supabase properties if they exist, or just send the event
+      const eventData = (eventToSchedule as any).supabaseEventData || eventToSchedule;
       
       const response = await fetch('/api/activate-event-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ eventId: eventData.id || 1 }),
+        body: JSON.stringify({ eventId: (eventData as any).id || 1 }),
       });
       
       const result = await response.json();
@@ -425,13 +439,8 @@ export default function EventResults({
           <h1 className="text-4xl md:text-5xl font-light text-white leading-[1.05] tracking-tight">
             Event Created
           </h1>
-<<<<<<< backend-kafka-setup
           <p className="text-white/40 text-lg font-light">
             Here are {suggestions.length} perfect spots curated just for you
-=======
-          <p className="text-white/40 text-base font-light">
-            Here are some perfect spots for your night out
->>>>>>> main
           </p>
           
           {/* Active Filters Indicator */}
@@ -466,11 +475,7 @@ export default function EventResults({
         {/* Event Cards with Navigation */}
         <div className="relative">
           <div className="max-w-7xl mx-auto">
-<<<<<<< backend-kafka-setup
             <div className="relative h-[700px] md:h-[750px] overflow-hidden">
-=======
-            <div className="relative h-[560px] md:h-[600px] overflow-hidden">
->>>>>>> main
               <div className="relative h-full w-full bg-white/5">
                 <AnimatePresence initial={false}>
                   <motion.div
@@ -491,7 +496,11 @@ export default function EventResults({
                           key={`${event?.id || idx}-${startIndex}`}
                           className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
                         >
-                          <EventCard suggestion={event} onViewReviews={handleViewReviews} onActivateEvent={handleActivateEvent} />
+                          <EventCard 
+                            suggestion={event} 
+                            onViewReviews={handleViewReviews} 
+                            onActivateEvent={handleActivateEvent} 
+                          />
                         </div>
                       );
                     })}
@@ -688,44 +697,35 @@ export default function EventResults({
                 {eventToSchedule && (
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-white text-lg font-light mb-2">{eventToSchedule.name}</h4>
+                      <h4 className="text-white text-lg font-light mb-2">{eventToSchedule.eventName || eventToSchedule.locationName}</h4>
                       <p className="text-white/60 text-sm font-light">{eventToSchedule.description}</p>
                     </div>
                     
                     <div className="space-y-2 pt-3 border-t border-white/10">
-                      {eventToSchedule.organizer && (
-                        <div className="text-white/70 text-sm">
-                          <span className="text-white/40">Organizer:</span> {eventToSchedule.organizer}
-                        </div>
-                      )}
-                      {eventToSchedule.location && (
-                        <div className="text-white/70 text-sm">
-                          <span className="text-white/40">Location:</span> {eventToSchedule.location}
-                        </div>
-                      )}
-                      {eventToSchedule.participants && eventToSchedule.participants.length > 0 && (
-                        <div className="text-white/70 text-sm">
-                          <span className="text-white/40">Participants:</span> {eventToSchedule.participants.join(', ')}
-                        </div>
-                      )}
-                      {eventToSchedule.attendees && (
-                        <div className="text-white/70 text-sm">
-                          <span className="text-white/40">Attendees:</span> {eventToSchedule.attendees}
-                        </div>
-                      )}
+                      <div className="text-white/70 text-sm">
+                        <span className="text-white/40">Location:</span> {eventToSchedule.locationName}
+                        {eventToSchedule.locationAddress && <span className="text-white/40">, {eventToSchedule.locationAddress}</span>}
+                      </div>
                     </div>
 
-                    {eventToSchedule.notes && (
+                    {(eventToSchedule.polymarketNote || eventToSchedule.redditNote) && (
                       <div className="pt-3 border-t border-white/10">
                         <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Notes</p>
-                        <p className="text-white/60 text-sm font-light">{eventToSchedule.notes}</p>
+                        {eventToSchedule.polymarketNote && <p className="text-white/60 text-sm font-light mb-1">{eventToSchedule.polymarketNote.notes}</p>}
+                        {eventToSchedule.redditNote && <p className="text-white/60 text-sm font-light">{eventToSchedule.redditNote.notes}</p>}
                       </div>
                     )}
 
                     {eventToSchedule.vibes && (
                       <div className="pt-3 border-t border-white/10">
                         <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Vibes</p>
-                        <p className="text-white/60 text-sm font-light">{eventToSchedule.vibes}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {eventToSchedule.vibes.map((vibe, idx) => (
+                            <span key={idx} className="text-white/60 text-sm font-light bg-white/5 px-2 py-1 rounded-sm">
+                              {vibe.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

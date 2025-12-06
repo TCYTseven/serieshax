@@ -2,12 +2,16 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { seriesProducer } from './kafka/producer';
+import eventCreationRouter from './api/eventCreation';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Mount Event Creation API
+app.use('/api/events', eventCreationRouter);
 
 /**
  * POST /api/send-sms
@@ -53,8 +57,8 @@ app.get('/health', (req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Backend HTTP server running on port ${PORT}`);
+    console.log(`   Event Creation API available at /api/events`);
   });
 }
 
 export default app;
-

@@ -7,7 +7,6 @@
     "dev": "ts-node src/index.ts",
     "dev:robust": "ts-node src/index-robust.ts",
     "dev:simple": "ts-node src/index-simple.ts",
-    "dev:server": "ts-node src/index-server.ts",
     "dev:server": "ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/index.js",

@@ -11,7 +11,6 @@ import {
   searchSpots,
   getSpotsForVibes,
   generateResponse,
-  generateResponseWithPredictions,
   detectIntent,
   detectPredictionTopic,
   extractCity,
@@ -36,22 +35,6 @@ import {
 } from './services/seriesApi';
 import { ParsedIncomingMessage } from './kafka/types';
 
-/**
- * Social Oracle Backend Entry Point
- * 
- * This service connects to Series via Kafka to receive incoming messages
- * and uses the Series REST API to send responses back to users.
- * 
- * Phase 3.5: Now using the OracleAgent for message processing
- */
-
-import { seriesConsumer } from './kafka/consumer';
-import { kafkaConfig } from './config/kafka';
-import { isSupabaseConfigured } from './config/supabase';
-import { isOpenAIConfigured } from './services';
-import { isSeriesApiConfigured } from './services/seriesApi';
-import { OracleAgent, createOracleAgent } from './oracle';
-
 console.log('');
 console.log('╔═══════════════════════════════════════════════════════════╗');
 console.log('║           🔮 SOCIAL ORACLE BACKEND                        ║');
@@ -59,16 +42,6 @@ console.log('║           Series Hackathon - Phase 3.5                    ║')
 console.log('╚═══════════════════════════════════════════════════════════╝');
 console.log('');
 
-<<<<<<< backend-kafka-setup
-// Create the Oracle Agent
-const oracle = createOracleAgent({
-  enablePolymarket: true,
-  enableReddit: true,
-  enableTypingIndicator: true,
-  maxResponseLength: 320,
-  debugMode: process.env.NODE_ENV === 'development',
-});
-=======
 /**
  * Process an incoming message and generate a response
  */
@@ -323,7 +296,6 @@ async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<vo
     }
   }
 }
->>>>>>> main
 
 /**
  * Main application startup
@@ -343,9 +315,9 @@ async function main(): Promise<void> {
     console.log('   Add SERIES_API_KEY=your-api-key to your .env file\n');
   }
 
-  // Set up message handler - delegate to Oracle Agent
+  // Set up message handler
   seriesConsumer.setMessageHandler(async (message) => {
-    await oracle.handleIncomingMessage(message);
+    await handleIncomingMessage(message);
   });
 
   try {

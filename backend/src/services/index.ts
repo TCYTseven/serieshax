@@ -24,6 +24,9 @@ export * from './vibeService';
 // Oracle Service (AI)
 export * from './oracleService';
 
+// Event Creation Agent
+export * from './eventCreationAgent';
+
 // Re-export Polymarket integration
 export { 
   getPolymarketContext, 

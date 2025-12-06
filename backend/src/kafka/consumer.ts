@@ -27,8 +27,11 @@ class SeriesConsumer {
     // This ensures we only process new messages, not backlogged ones
     console.log(`📡 Using consumer group: ${kafkaConfig.consumerGroup}`);
     
+    // SAFEGUARD: Prevent crash if config is missing (e.g. running in API-only mode)
+    const groupId = kafkaConfig.consumerGroup || 'unconfigured-group';
+
     this.consumer = kafka.consumer({ 
-      groupId: kafkaConfig.consumerGroup,
+      groupId: groupId,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
     });
@@ -46,7 +49,13 @@ class SeriesConsumer {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.warn('⚠️ Coimage.pngnsumer is already running');
+      console.warn('⚠️ Consumer is already running');
+      return;
+    }
+
+    // Check configuration before attempting to connect
+    if (!kafkaConfig.consumerGroup || !kafkaConfig.topic) {
+      console.warn('⚠️ Kafka configuration missing (consumerGroup or topic). Consumer will NOT start.');
       return;
     }
 
