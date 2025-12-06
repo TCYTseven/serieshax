@@ -60,6 +60,7 @@ export async function saveOnboardingToSupabase(
         age: onboardingData.age ? parseInt(onboardingData.age) : null,
         city: city,
         location: onboardingData.location,
+        phone_number: onboardingData.phoneNumber || null,
         interests: onboardingData.interests,
         goals: onboardingData.goals,
         sports_teams: onboardingData.sportsTeams,
