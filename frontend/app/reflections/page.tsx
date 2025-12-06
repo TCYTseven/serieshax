@@ -36,15 +36,23 @@ export default function ReflectionsPage() {
   const loadReflections = async () => {
     try {
       const supabase = createClient();
+      
+      console.log("Loading reflections for user:", user!.id);
+      
+      // Try querying without the user_id filter first to see if RLS is working
+      // RLS should automatically filter to only this user's reflections
       const { data, error: fetchError } = await supabase
         .from("reflections")
         .select("*")
-        .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
 
+      console.log("Reflections query result:", { data, error: fetchError });
+
       if (fetchError) {
+        console.error("Error loading reflections:", fetchError);
         setError("Failed to load reflections.");
       } else {
+        console.log("Loaded reflections:", data);
         setReflections(data || []);
       }
     } catch (err) {
@@ -259,6 +267,7 @@ export default function ReflectionsPage() {
                   )}
 
                   {reflection.follow_up_questions &&
+                    Array.isArray(reflection.follow_up_questions) &&
                     reflection.follow_up_questions.length > 0 && (
                       <div>
                         <h3 className="text-white/40 text-xs uppercase tracking-wider mb-2">
