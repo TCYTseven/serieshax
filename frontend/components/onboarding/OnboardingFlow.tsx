@@ -7,9 +7,11 @@ import { Button } from "@heroui/button";
 import Step1PersonalInfo from "./Step1PersonalInfo";
 import Step2Interests from "./Step2Interests";
 import Step3Goals from "./Step3Goals";
+import Step4SocialVibe from "./Step4SocialVibe";
+import Step5SignUp from "./Step5SignUp";
 import CompletionScreen from "./CompletionScreen";
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 5;
 const SWIPE_THRESHOLD = 50;
 
 export default function OnboardingFlow() {
@@ -41,8 +43,8 @@ export default function OnboardingFlow() {
     }
   };
 
-  const handleComplete = () => {
-    completeOnboarding();
+  const handleComplete = async () => {
+    await completeOnboarding();
   };
 
   // Swipe handlers
@@ -127,6 +129,12 @@ export default function OnboardingFlow() {
             )}
             {currentStep === 3 && (
               <Step3Goals onNext={handleNext} onSkip={handleSkip} />
+            )}
+            {currentStep === 4 && (
+              <Step4SocialVibe onNext={handleNext} onSkip={handleSkip} />
+            )}
+            {currentStep === 5 && (
+              <Step5SignUp onNext={handleNext} onSkip={handleSkip} />
             )}
           </motion.div>
         </AnimatePresence>

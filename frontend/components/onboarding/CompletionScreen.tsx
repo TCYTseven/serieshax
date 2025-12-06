@@ -5,13 +5,14 @@ import { motion } from "framer-motion";
 import { Button } from "@heroui/button";
 
 interface CompletionScreenProps {
-  onComplete: () => void;
+  onComplete: () => Promise<void>;
 }
 
 export default function CompletionScreen({
   onComplete,
 }: CompletionScreenProps) {
   const [showConfetti, setShowConfetti] = useState(true);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -78,12 +79,20 @@ export default function CompletionScreen({
           transition={{ delay: 0.5 }}
         >
           <Button
-            onClick={onComplete}
+            onClick={async () => {
+              setIsCompleting(true);
+              try {
+                await onComplete();
+              } finally {
+                setIsCompleting(false);
+              }
+            }}
+            disabled={isCompleting}
             className="bg-[#0084ff] text-white font-medium px-8"
             radius="full"
             size="lg"
           >
-            Get Started
+            {isCompleting ? "Saving..." : "Get Started"}
           </Button>
         </motion.div>
       </motion.div>
