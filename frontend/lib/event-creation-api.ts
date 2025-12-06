@@ -67,6 +67,70 @@ export interface CreateEventResponse {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get a random pickleball image from available options
+ */
+function getRandomPickleballImage(): string {
+  const pickleballImages = [
+    '/pickleball-club.jpg',
+    '/pickleball-club-2.jpg',
+    '/pickleball-club-3.jpeg'
+  ];
+  const randomIndex = Math.floor(Math.random() * pickleballImages.length);
+  return pickleballImages[randomIndex];
+}
+
+/**
+ * Determine the appropriate image path based on event content
+ * Checks for pickleball or sports bar keywords in event name, location, description, or venue type
+ */
+export function getEventImagePath(event: {
+  eventName?: string;
+  locationName?: string;
+  description?: string;
+  venueType?: string;
+  imagePath?: string;
+}): string {
+  // Normalize text for case-insensitive matching
+  const eventName = (event.eventName || '').toLowerCase();
+  const locationName = (event.locationName || '').toLowerCase();
+  const description = (event.description || '').toLowerCase();
+  const venueType = (event.venueType || '').toLowerCase();
+  
+  // Check for pickleball-related keywords
+  const pickleballKeywords = ['pickleball', 'pickle ball', 'paddle'];
+  const hasPickleball = pickleballKeywords.some(keyword => 
+    eventName.includes(keyword) || 
+    locationName.includes(keyword) || 
+    description.includes(keyword) ||
+    venueType.includes(keyword)
+  );
+  
+  if (hasPickleball) {
+    return getRandomPickleballImage();
+  }
+  
+  // Check for sports bar-related keywords
+  const sportsBarKeywords = ['sports bar', 'sportsbar', 'game night', 'watch game', 'watch the game'];
+  const hasSportsBar = sportsBarKeywords.some(keyword => 
+    eventName.includes(keyword) || 
+    locationName.includes(keyword) || 
+    description.includes(keyword) ||
+    venueType.includes(keyword)
+  );
+  
+  if (hasSportsBar) {
+    return '/sports-bar.jpg';
+  }
+  
+  // Return existing imagePath or default
+  return event.imagePath || '/bar.jpg';
+}
+
+// ============================================================================
 // API FUNCTIONS
 // ============================================================================
 
@@ -208,7 +272,7 @@ export function generateFallbackEvents(
   // Sports bar if user follows sports teams
   const teamName = Object.values(sportsTeams)[0];
   if (teamName || onboardingData.interests.includes('Sports')) {
-    events.push({
+    const sportsBarEvent = {
       id: 1,
       locationName: 'Barclays Center Sports Bar',
       locationAddress: `123 Main St, ${city}`,
@@ -232,7 +296,9 @@ export function generateFallbackEvents(
         { user: 'Alex M.', rating: 5, text: 'Amazing atmosphere! The staff is super friendly.', date: '2 days ago' },
         { user: 'Sarah K.', rating: 5, text: 'Best sports bar in the area. Highly recommend!', date: '1 week ago' },
       ],
-    });
+    };
+    sportsBarEvent.imagePath = getEventImagePath(sportsBarEvent);
+    events.push(sportsBarEvent);
   }
 
   // Restaurant
@@ -350,6 +416,10 @@ export function generateFallbackEvents(
     ],
   });
 
-  return events;
+  // Apply image selection logic to all events
+  return events.map(event => ({
+    ...event,
+    imagePath: getEventImagePath(event),
+  }));
 }
 
