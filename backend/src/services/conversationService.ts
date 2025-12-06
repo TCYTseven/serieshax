@@ -35,12 +35,14 @@ export async function getOrCreateConversation(
     .single();
 
   if (existingConversation && !findError) {
-    // Update last_message_at
+    // Update last_message_at but PRESERVE context_data
     const { data: updated, error: updateError } = await supabase
       .from('conversations')
       .update({ 
         last_message_at: new Date().toISOString(),
-        series_conversation_id: seriesConversationId || existingConversation.series_conversation_id
+        series_conversation_id: seriesConversationId || existingConversation.series_conversation_id,
+        // Preserve context_data - don't overwrite it
+        context_data: existingConversation.context_data || {}
       })
       .eq('id', existingConversation.id)
       .select()
