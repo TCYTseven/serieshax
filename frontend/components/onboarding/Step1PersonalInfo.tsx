@@ -19,6 +19,7 @@ export default function Step1PersonalInfo({
   const [name, setName] = useState(data.name);
   const [age, setAge] = useState(data.age);
   const [location, setLocation] = useState(data.location);
+  const [phoneNumber, setPhoneNumber] = useState(data.phoneNumber);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [manualLocation, setManualLocation] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -65,12 +66,37 @@ export default function Step1PersonalInfo({
     }
   };
 
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digit characters
+    const phoneNumber = value.replace(/\D/g, "");
+    
+    // Limit to 10 digits (US phone number format)
+    const limitedNumber = phoneNumber.slice(0, 10);
+    
+    // Format as (XXX) XXX-XXXX
+    if (limitedNumber.length === 0) return "";
+    if (limitedNumber.length <= 3) return `(${limitedNumber}`;
+    if (limitedNumber.length <= 6) {
+      return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(3)}`;
+    }
+    return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(3, 6)}-${limitedNumber.slice(6)}`;
+  };
+
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhoneNumber(formatted);
+  };
+
   const handleNext = () => {
-    updateData({ name, age, location: location || "" });
+    // Save phone number as digits only (remove formatting)
+    const phoneNumberDigits = phoneNumber.replace(/\D/g, "");
+    updateData({ name, age, location: location || "", phoneNumber: phoneNumberDigits });
     onNext();
   };
 
-  const canProceed = name.trim().length > 0 && age.trim().length > 0;
+  // Check if phone number has at least 10 digits (formatted as (XXX) XXX-XXXX = 14 chars)
+  const phoneNumberDigits = phoneNumber.replace(/\D/g, "");
+  const canProceed = name.trim().length > 0 && age.trim().length > 0 && phoneNumberDigits.length === 10;
 
   return (
     <>
@@ -127,6 +153,24 @@ export default function Step1PersonalInfo({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+          >
+            <label className="block text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              placeholder="(555) 123-4567"
+              value={phoneNumber}
+              onChange={handlePhoneNumberChange}
+              maxLength={14} // (XXX) XXX-XXXX = 14 characters
+              className="w-full px-0 py-3 bg-transparent border-b border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-[#0084ff] transition-colors font-light text-base"
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
           >
             <label className="block text-xs text-white/40 uppercase tracking-wider mb-4 font-medium">
               Location
