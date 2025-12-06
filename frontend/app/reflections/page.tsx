@@ -78,8 +78,120 @@ export default function ReflectionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black px-6 py-12">
-      <div className="max-w-4xl mx-auto space-y-12">
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Gradient orbs */}
+        <motion.div
+          className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.4, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0084ff]/2 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.3, 0.2],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2,
+          }}
+        />
+        
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }}
+        />
+        
+        {/* Animated grid lines */}
+        <motion.div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.2) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.2) 1px, transparent 1px)`,
+            backgroundSize: "100px 100px",
+          }}
+          animate={{
+            backgroundPosition: ['0px 0px', '100px 100px'],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+        
+        {/* Floating particles */}
+        {Array.from({ length: 15 }).map((_, i) => {
+          const size = Math.random() * 2 + 1;
+          const startX = Math.random() * 100;
+          const startY = Math.random() * 100;
+          
+          return (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-[#0084ff]/15"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: `${startX}%`,
+                top: `${startY}%`,
+              }}
+              animate={{
+                y: [
+                  startY * window.innerHeight * 0.01,
+                  (startY - 40) * window.innerHeight * 0.01,
+                  startY * window.innerHeight * 0.01,
+                ],
+                x: [
+                  startX * window.innerWidth * 0.01,
+                  (startX + Math.random() * 30 - 15) * window.innerWidth * 0.01,
+                  startX * window.innerWidth * 0.01,
+                ],
+                opacity: [0.15, 0.4, 0.15],
+                scale: [1, 1.3, 1],
+              }}
+              transition={{
+                duration: Math.random() * 6 + 5,
+                repeat: Infinity,
+                delay: Math.random() * 3,
+                ease: "easeInOut",
+              }}
+            />
+          );
+        })}
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-12">
+        <div className="space-y-12">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -169,6 +281,7 @@ export default function ReflectionsPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

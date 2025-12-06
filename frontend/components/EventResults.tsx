@@ -289,9 +289,9 @@ const generateEventSuggestions = (
 // Event Card Component
 const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion: any; onViewReviews: (event: any) => void; onActivateEvent: (event: any) => void }) => {
   return (
-    <div className="bg-black border border-white/10 p-8 md:p-10 h-full flex flex-col">
+    <div className="bg-black border border-white/10 p-6 md:p-8 h-full flex flex-col">
       {/* Image */}
-      <div className="relative h-48 md:h-56 w-full mb-6">
+      <div className="relative h-36 md:h-40 w-full mb-4">
         <Image
           src={suggestion.image}
           alt={suggestion.name}
@@ -319,9 +319,9 @@ const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion:
       </div>
 
       {/* Content */}
-      <div className="space-y-4 flex-1 flex flex-col">
+      <div className="space-y-3 flex-1 flex flex-col">
         <div>
-          <h3 className="text-xl md:text-2xl font-light text-white mb-1 tracking-tight">
+          <h3 className="text-lg md:text-xl font-light text-white mb-1 tracking-tight">
             {suggestion.name}
           </h3>
           <p className="text-white/40 text-xs font-light uppercase tracking-wider">
@@ -331,18 +331,18 @@ const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion:
 
         {/* Description */}
         <div>
-          <p className="text-white/60 text-sm font-light leading-relaxed">
+          <p className="text-white/60 text-xs font-light leading-relaxed line-clamp-2">
             {suggestion.description}
           </p>
         </div>
 
         {/* Notes Section */}
         {(suggestion.redditNote || suggestion.polymarketNote || suggestion.seriesReview || suggestion.isPartnered) && (
-          <div className="space-y-2 pt-3 border-t border-white/10">
-            <p className="text-xs text-white/40 uppercase tracking-wider font-medium mb-2">
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="text-xs text-white/40 uppercase tracking-wider font-medium mb-1.5">
               Notes
             </p>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {suggestion.isPartnered && (
                 <li className="text-white/50 text-xs font-light">
                   • 30% discount to all Series members
@@ -368,14 +368,14 @@ const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion:
         )}
 
         {/* Footer Actions */}
-        <div className="space-y-3 pt-3 border-t border-white/10 mt-auto">
+        <div className="space-y-2 pt-2 border-t border-white/10 mt-auto">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs font-light">
               {suggestion.distance} away
             </span>
             <button
               onClick={() => onViewReviews(suggestion)}
-              className="px-4 py-1.5 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-colors text-xs font-light uppercase tracking-wider"
+              className="px-3 py-1 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-colors text-xs font-light uppercase tracking-wider"
               style={{ borderRadius: 0 }}
             >
               View Reviews
@@ -383,7 +383,7 @@ const EventCard = ({ suggestion, onViewReviews, onActivateEvent }: { suggestion:
           </div>
           <button
             onClick={() => onActivateEvent(suggestion)}
-            className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
+            className="w-full px-4 py-1.5 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
             style={{ borderRadius: 0 }}
           >
             Activate Event Agent
@@ -573,19 +573,72 @@ export default function EventResults({
   const visibleEvents = getVisibleEvents();
 
   return (
-    <div className="min-h-screen bg-black px-6 py-12">
-      <div className="max-w-7xl mx-auto space-y-16">
+    <div className="min-h-screen bg-black relative overflow-hidden px-6 py-6">
+      {/* Background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Gradient orbs */}
+        <motion.div
+          className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.4, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0084ff]/2 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.3, 0.2],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2,
+          }}
+        />
+        
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
+          className="space-y-2"
         >
-          <div className="w-12 h-px bg-[#0084ff] mb-4" />
-          <h1 className="text-5xl md:text-6xl font-light text-white leading-[1.05] tracking-tight">
+          <div className="w-12 h-px bg-[#0084ff] mb-2" />
+          <h1 className="text-4xl md:text-5xl font-light text-white leading-[1.05] tracking-tight">
             Event Created
           </h1>
-          <p className="text-white/40 text-lg font-light">
+          <p className="text-white/40 text-base font-light">
             Here are some perfect spots for your night out
           </p>
         </motion.div>
@@ -593,7 +646,7 @@ export default function EventResults({
         {/* Event Cards with Navigation */}
         <div className="relative">
           <div className="max-w-7xl mx-auto">
-            <div className="relative h-[650px] md:h-[700px] overflow-hidden">
+            <div className="relative h-[560px] md:h-[600px] overflow-hidden">
               <div className="relative h-full w-full bg-white/5">
                 <AnimatePresence initial={false}>
                   <motion.div
