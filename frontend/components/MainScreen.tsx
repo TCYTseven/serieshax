@@ -85,8 +85,23 @@ export default function MainScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-16">
-      <div className="w-full max-w-4xl mx-auto flex flex-col items-center space-y-16">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
+      {/* Subtle background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#0084ff]/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0084ff]/2 rounded-full blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 132, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 132, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px',
+          }}
+        />
+      </div>
+      
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center space-y-16 relative z-10">
         {/* Main Question */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

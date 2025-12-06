@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Modal, ModalContent, ModalHeader, ModalBody, useDisclosure } from "@heroui/modal";
 import { OnboardingData } from "@/contexts/OnboardingContext";
@@ -34,12 +34,14 @@ const generateEventSuggestions = (
       type: "Sports Bar",
       description: "Watch Nets games with fellow fans. Multiple screens showing live games.",
       image: "/bar.jpg",
-      polymarketInfo: filters.trendingTopics
+      polymarketNote: filters.trendingTopics
         ? "Polymarket says lots of activity as the Brooklyn Nets and Celtics face off, with the Celtics being favored 89%"
         : null,
-      redditInfo: filters.secretGems
-        ? "From Reddit, a user said this is a HIDDEN GEM"
+      redditNote: filters.secretGems
+        ? "Reddit user said this is a HIDDEN GEM"
         : null,
+      seriesReview: "Maintains a 4.6 star review from other Series users",
+      isPartnered: true,
       price: "$$",
       distance: "0.5 miles",
       reviews: [
@@ -76,10 +78,12 @@ const generateEventSuggestions = (
       type: "Restaurant",
       description: "Great food spot perfect for groups. Known for their amazing atmosphere.",
       image: "/bar.jpg",
-      polymarketInfo: null,
-      redditInfo: filters.secretGems
-        ? "From Reddit, a user said this is a HIDDEN GEM"
+      polymarketNote: null,
+      redditNote: filters.secretGems
+        ? "Reddit user said this is a HIDDEN GEM"
         : null,
+      seriesReview: "Maintains a 4.8 star review from other Series users",
+      isPartnered: false,
       price: filters.budget || "$$",
       distance: "1.2 miles",
       reviews: [
@@ -108,10 +112,12 @@ const generateEventSuggestions = (
       type: "Bar & Lounge",
       description: "Perfect spot for drinks and meeting new people. Great vibe tonight.",
       image: "/bar.jpg",
-      polymarketInfo: null,
-      redditInfo: filters.secretGems
-        ? "From Reddit, a user said this is a HIDDEN GEM"
+      polymarketNote: null,
+      redditNote: filters.secretGems
+        ? "Reddit user said this is a HIDDEN GEM"
         : null,
+      seriesReview: "Maintains a 4.7 star review from other Series users",
+      isPartnered: true,
       price: "$$",
       distance: "0.8 miles",
       reviews: [
@@ -133,18 +139,20 @@ const generateEventSuggestions = (
     });
   }
 
-  // Default suggestion if no matches
-  if (suggestions.length === 0) {
-    suggestions.push({
-      id: 1,
+  // Always add default suggestions to ensure we have 3-4 results
+  suggestions.push(
+    {
+      id: 4,
       name: "The Social Spot",
       type: "Venue",
       description: "A great place to hang out based on your preferences.",
       image: "/bar.jpg",
-      polymarketInfo: null,
-      redditInfo: filters.secretGems
-        ? "From Reddit, a user said this is a HIDDEN GEM"
+      polymarketNote: null,
+      redditNote: filters.secretGems
+        ? "Reddit user said this is a HIDDEN GEM"
         : null,
+      seriesReview: "Maintains a 4.5 star review from other Series users",
+      isPartnered: false,
       price: filters.budget || "$$",
       distance: "1.0 miles",
       reviews: [
@@ -156,10 +164,142 @@ const generateEventSuggestions = (
           date: "1 week ago",
         },
       ],
-    });
-  }
+    },
+    {
+      id: 5,
+      name: "Downtown Bar & Grill",
+      type: "Bar",
+      description: "Popular spot with great drinks and friendly atmosphere.",
+      image: "/bar.jpg",
+      polymarketNote: null,
+      redditNote: null,
+      seriesReview: "Maintains a 4.4 star review from other Series users",
+      isPartnered: false,
+      price: "$$",
+      distance: "1.5 miles",
+      reviews: [
+        {
+          id: 1,
+          user: "Jordan M.",
+          rating: 4,
+          text: "Solid spot, good drinks and decent food.",
+          date: "3 days ago",
+        },
+      ],
+    },
+  );
 
-  return suggestions;
+  return suggestions.slice(0, 4); // Limit to 4 results
+};
+
+// Event Card Component
+const EventCard = ({ suggestion, onViewReviews }: { suggestion: any; onViewReviews: (event: any) => void }) => {
+  return (
+    <div className="bg-black border border-white/10 p-8 md:p-10 h-full flex flex-col">
+      {/* Image */}
+      <div className="relative h-48 md:h-56 w-full mb-6">
+        <Image
+          src={suggestion.image}
+          alt={suggestion.name}
+          fill
+          className="object-cover"
+        />
+        <div className="absolute top-4 right-4 bg-black/80 px-3 py-1.5">
+          <span className="text-white text-sm font-light">
+            {suggestion.price}
+          </span>
+        </div>
+        {/* Series Partner Badge */}
+        {suggestion.isPartnered && (
+          <div className="absolute top-4 left-4 bg-[#0084ff] px-3 py-1.5 flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+            <span className="text-white text-xs font-light uppercase tracking-wider">
+              Partnered with Series
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="space-y-4 flex-1 flex flex-col">
+        <div>
+          <h3 className="text-xl md:text-2xl font-light text-white mb-1 tracking-tight">
+            {suggestion.name}
+          </h3>
+          <p className="text-white/40 text-xs font-light uppercase tracking-wider">
+            {suggestion.type}
+          </p>
+        </div>
+
+        {/* Description */}
+        <div>
+          <p className="text-white/60 text-sm font-light leading-relaxed">
+            {suggestion.description}
+          </p>
+        </div>
+
+        {/* Notes Section */}
+        {(suggestion.redditNote || suggestion.polymarketNote || suggestion.seriesReview || suggestion.isPartnered) && (
+          <div className="space-y-2 pt-3 border-t border-white/10">
+            <p className="text-xs text-white/40 uppercase tracking-wider font-medium mb-2">
+              Notes
+            </p>
+            <ul className="space-y-1.5">
+              {suggestion.isPartnered && (
+                <li className="text-white/50 text-xs font-light">
+                  • 30% discount to all Series members
+                </li>
+              )}
+              {suggestion.redditNote && (
+                <li className="text-white/50 text-xs font-light">
+                  • {suggestion.redditNote}
+                </li>
+              )}
+              {suggestion.polymarketNote && (
+                <li className="text-white/50 text-xs font-light">
+                  • {suggestion.polymarketNote}
+                </li>
+              )}
+              {suggestion.seriesReview && (
+                <li className="text-white/50 text-xs font-light">
+                  • {suggestion.seriesReview}
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Footer Actions */}
+        <div className="space-y-3 pt-3 border-t border-white/10 mt-auto">
+          <div className="flex items-center justify-between">
+            <span className="text-white/40 text-xs font-light">
+              {suggestion.distance} away
+            </span>
+            <button
+              onClick={() => onViewReviews(suggestion)}
+              className="px-4 py-1.5 bg-[#0084ff] text-white hover:bg-[#00a0ff] transition-colors text-xs font-light uppercase tracking-wider"
+              style={{ borderRadius: 0 }}
+            >
+              View Reviews
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              console.log("Activating Event Agent for:", suggestion.name);
+            }}
+            className="w-full px-4 py-2 border border-[#0084ff] text-[#0084ff] hover:bg-[#0084ff]/10 transition-all text-xs font-light uppercase tracking-wider"
+            style={{ borderRadius: 0 }}
+          >
+            Activate Event Agent
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function EventResults({
@@ -169,6 +309,8 @@ export default function EventResults({
 }: EventResultsProps) {
   const suggestions = generateEventSuggestions(onboardingData, filters);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [startIndex, setStartIndex] = useState(0);
+  const [direction, setDirection] = useState<"left" | "right">("right");
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const handleViewReviews = (event: any) => {
@@ -176,99 +318,146 @@ export default function EventResults({
     onOpen();
   };
 
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDirection("right");
+    setStartIndex((prev) => {
+      // If we're at the end, wrap around
+      if (prev + 2 >= suggestions.length) {
+        return 0;
+      }
+      return prev + 1;
+    });
+  };
+
+  const handlePrevious = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDirection("left");
+    setStartIndex((prev) => {
+      // If we're at the start, wrap around
+      if (prev === 0) {
+        return Math.max(0, suggestions.length - 2);
+      }
+      return prev - 1;
+    });
+  };
+
+  // Get the two events to display
+  const getVisibleEvents = () => {
+    const events = [];
+    for (let i = 0; i < 2; i++) {
+      const index = (startIndex + i) % suggestions.length;
+      events.push({ 
+        ...suggestions[index], 
+        position: i
+      });
+    }
+    return events;
+  };
+
+  const visibleEvents = getVisibleEvents();
+
   return (
     <div className="min-h-screen bg-black px-6 py-12">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-16">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-3"
+          className="space-y-4"
         >
-          <h1 className="text-4xl md:text-5xl font-normal text-[#0084ff] leading-[1.1]">
-            Event Created!
+          <div className="w-12 h-px bg-[#0084ff] mb-4" />
+          <h1 className="text-5xl md:text-6xl font-light text-white leading-[1.05] tracking-tight">
+            Event Created
           </h1>
-          <p className="text-white/50 text-lg">
+          <p className="text-white/40 text-lg font-light">
             Here are some perfect spots for your night out
           </p>
         </motion.div>
 
-        {/* Event Suggestions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {suggestions.map((suggestion, index) => (
-            <motion.div
-              key={suggestion.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden hover:border-[#0084ff]/30 transition-all"
-            >
-              {/* Image */}
-              <div className="relative h-48 w-full">
-                <Image
-                  src={suggestion.image}
-                  alt={suggestion.name}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-lg">
-                  <span className="text-white text-sm font-medium">
-                    {suggestion.price}
-                  </span>
-                </div>
+        {/* Event Cards with Navigation */}
+        <div className="relative">
+          <div className="max-w-7xl mx-auto">
+            <div className="relative h-[650px] md:h-[700px] overflow-hidden">
+              <div className="relative h-full grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5">
+                <AnimatePresence mode="sync" initial={false}>
+                  {visibleEvents.map((event, idx) => {
+                    const isLeft = idx === 0;
+                    
+                    // Determine animation based on position and direction
+                    let initialX = 0;
+                    let exitX = 0;
+                    
+                    if (direction === "right") {
+                      // Moving forward: left card exits left, right card slides to left, new card enters from right
+                      if (isLeft) {
+                        // Left position: card that was on the right, now sliding to left position
+                        initialX = 100; // Start from right
+                        exitX = -100; // Exit to left
+                      } else {
+                        // Right position: new card entering from right
+                        initialX = 100; // Enter from right
+                        exitX = -100; // Exit to left
+                      }
+                    } else {
+                      // Moving backward: right card exits right, left card slides to right, new card enters from left
+                      if (isLeft) {
+                        // Left position: new card entering from left
+                        initialX = -100; // Enter from left
+                        exitX = 100; // Exit to right
+                      } else {
+                        // Right position: card that was on the left, now sliding to right position
+                        initialX = -100; // Start from left
+                        exitX = 100; // Exit to right
+                      }
+                    }
+                    
+                    // Use position + startIndex as key so both positions animate when startIndex changes
+                    return (
+                      <motion.div
+                        key={`${isLeft ? 'left' : 'right'}-${startIndex}`}
+                        initial={{ x: initialX }}
+                        animate={{ x: 0 }}
+                        exit={{ x: exitX }}
+                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        className={`h-full ${isLeft ? 'md:pr-[0.5px]' : 'md:pl-[0.5px]'}`}
+                      >
+                        <EventCard suggestion={event} onViewReviews={handleViewReviews} />
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
+            </div>
 
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="text-2xl font-medium text-white mb-1">
-                    {suggestion.name}
-                  </h3>
-                  <p className="text-white/60 text-sm mb-2">{suggestion.type}</p>
-                  
-                  {/* Reddit Info - inline description */}
-                  {suggestion.redditInfo && (
-                    <p className="text-orange-400/90 text-sm mb-2 italic">
-                      {suggestion.redditInfo}
-                    </p>
-                  )}
-                  
-                  {/* Polymarket Info - inline description */}
-                  {suggestion.polymarketInfo && (
-                    <p className="text-[#0084ff]/90 text-sm mb-2">
-                      {suggestion.polymarketInfo}
-                    </p>
-                  )}
-                </div>
-
-                <p className="text-white/80">{suggestion.description}</p>
-
-                {/* Footer */}
-                <div className="space-y-3 pt-2 border-t border-white/10">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/60 text-sm">
-                      {suggestion.distance} away
-                    </span>
-                    <button
-                      onClick={() => handleViewReviews(suggestion)}
-                      className="px-4 py-2 bg-[#0084ff] text-white rounded-lg hover:bg-[#00a0ff] transition-colors text-sm font-medium"
-                    >
-                      View Reviews
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement Series integration
-                      console.log("Activating Event Agent for:", suggestion.name);
-                    }}
-                    className="w-full px-6 py-3 border-2 border-[#0084ff] text-[#0084ff] rounded-lg hover:bg-[#0084ff]/10 transition-all text-sm font-medium"
-                  >
-                    Activate Event Agent
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+            {/* Navigation Arrows */}
+            {suggestions.length > 2 && (
+              <>
+                <button
+                  onClick={handlePrevious}
+                  type="button"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50 pointer-events-auto"
+                  style={{ borderRadius: 0 }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNext}
+                  type="button"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 w-10 h-10 border border-white/10 bg-black/80 hover:bg-black hover:border-white/20 transition-all flex items-center justify-center text-white/60 hover:text-white z-50 pointer-events-auto"
+                  style={{ borderRadius: 0 }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -279,7 +468,7 @@ export default function EventResults({
         placement="center"
         size="2xl"
         classNames={{
-          base: "bg-[#0a0a0a] border border-white/10",
+          base: "bg-black border border-white/10",
           header: "border-b border-white/10",
           body: "py-6",
         }}
@@ -288,9 +477,10 @@ export default function EventResults({
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1 text-white">
-                <h3 className="text-2xl font-medium">{selectedEvent?.name}</h3>
-                <p className="text-white/60 text-sm font-normal">
-                  Reviews from Social Oracle users
+                <div className="w-12 h-px bg-[#0084ff] mb-2" />
+                <h3 className="text-2xl font-light tracking-tight">{selectedEvent?.name}</h3>
+                <p className="text-white/40 text-sm font-light">
+                  Reviews from other Series Social Oracle users
                 </p>
               </ModalHeader>
               <ModalBody>
@@ -298,19 +488,20 @@ export default function EventResults({
                   {selectedEvent?.reviews?.map((review: any) => (
                     <div
                       key={review.id}
-                      className="bg-[#111111] border border-white/8 rounded-lg p-4"
+                      className="bg-[#111111] border border-white/8 p-4"
+                      style={{ borderRadius: 0 }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-white font-medium">
+                          <span className="text-white font-light">
                             {review.user}
                           </span>
                           <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <svg
                                 key={i}
-                                width="14"
-                                height="14"
+                                width="12"
+                                height="12"
                                 viewBox="0 0 24 24"
                                 fill={i < review.rating ? "#0084ff" : "none"}
                                 stroke={i < review.rating ? "#0084ff" : "#666"}
@@ -321,11 +512,11 @@ export default function EventResults({
                             ))}
                           </div>
                         </div>
-                        <span className="text-white/40 text-xs">
+                        <span className="text-white/30 text-xs font-light">
                           {review.date}
                         </span>
                       </div>
-                      <p className="text-white/80 text-sm">{review.text}</p>
+                      <p className="text-white/60 text-sm font-light">{review.text}</p>
                     </div>
                   ))}
                 </div>
