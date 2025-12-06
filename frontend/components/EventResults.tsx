@@ -288,16 +288,18 @@ export default function EventResults({
     
     setIsScheduling(true);
     try {
-      // Use the Supabase event data if available, otherwise use the transformed event
-      // Cast to any to access potential supabase properties if they exist, or just send the event
-      const eventData = (eventToSchedule as any).supabaseEventData || eventToSchedule;
-      
+      // Send event identifying information to look up the correct Supabase event
       const response = await fetch('/api/activate-event-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ eventId: (eventData as any).id || 1 }),
+        body: JSON.stringify({ 
+          eventId: (eventToSchedule as any).supabaseId || (eventToSchedule as any).id,
+          locationName: eventToSchedule.locationName,
+          eventName: eventToSchedule.eventName,
+          locationAddress: eventToSchedule.locationAddress,
+        }),
       });
       
       const result = await response.json();

@@ -157,11 +157,16 @@ export default function ReflectionsPage() {
           }}
         />
         
-        {/* Floating particles */}
+        {/* Floating particles - use deterministic values to avoid hydration mismatch */}
         {Array.from({ length: 15 }).map((_, i) => {
-          const size = Math.random() * 2 + 1;
-          const startX = Math.random() * 100;
-          const startY = Math.random() * 100;
+          // Use index-based pseudo-random to avoid hydration mismatch
+          const seed = i * 0.618; // Golden ratio for better distribution
+          const size = (1 + (seed % 1) * 2);
+          const startX = (seed * 100) % 100;
+          const startY = ((seed * 1.618) * 100) % 100;
+          const xOffset = ((seed * 2.718) % 1) * 30 - 15;
+          const duration = 5 + ((seed * 3.141) % 1) * 6;
+          const delay = ((seed * 1.414) % 1) * 3;
           
           return (
             <motion.div
@@ -175,22 +180,22 @@ export default function ReflectionsPage() {
               }}
               animate={{
                 y: [
-                  startY * window.innerHeight * 0.01,
-                  (startY - 40) * window.innerHeight * 0.01,
-                  startY * window.innerHeight * 0.01,
+                  startY * 10,
+                  (startY - 40) * 10,
+                  startY * 10,
                 ],
                 x: [
-                  startX * window.innerWidth * 0.01,
-                  (startX + Math.random() * 30 - 15) * window.innerWidth * 0.01,
-                  startX * window.innerWidth * 0.01,
+                  startX * 10,
+                  (startX + xOffset) * 10,
+                  startX * 10,
                 ],
                 opacity: [0.15, 0.4, 0.15],
                 scale: [1, 1.3, 1],
               }}
               transition={{
-                duration: Math.random() * 6 + 5,
+                duration: duration,
                 repeat: Infinity,
-                delay: Math.random() * 3,
+                delay: delay,
                 ease: "easeInOut",
               }}
             />

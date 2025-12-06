@@ -35,32 +35,106 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get eventId from request body if provided
-    let eventId = 1;
+    // Get event identifying information from request body
+    let eventId: number | null = null;
+    let locationName: string | null = null;
+    let eventName: string | null = null;
+    let locationAddress: string | null = null;
+    
     try {
       const body = await request.json().catch(() => ({}));
+      
+      // Try to get eventId first
       if (body.eventId) {
         const idStr = body.eventId.toString().replace('supabase-', '');
-        eventId = parseInt(idStr) || 1;
+        const parsedId = parseInt(idStr);
+        // Only use if it's a reasonable Supabase ID (not a small generated index)
+        if (parsedId > 10) {
+          eventId = parsedId;
+        }
       }
+      
+      // Get identifying fields for lookup - extract values first
+      const extractedLocationName = body.locationName;
+      const extractedEventName = body.eventName;
+      const extractedLocationAddress = body.locationAddress;
+      
+      // Then assign to the let variables
+      locationName = extractedLocationName ?? null;
+      eventName = extractedEventName ?? null;
+      locationAddress = extractedLocationAddress ?? null;
     } catch (error) {
-      // Default to event id 1 if parsing fails
-      eventId = 1;
+      console.error('Error parsing request body:', error);
     }
 
     // Use server client for database queries
     const supabase = createServerSupabaseClient();
 
-    // Get event details from events table
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single();
+    // Try to find the event by ID first, then by location/event name
+    let event = null;
+    let eventError = null;
 
-    if (eventError || !event) {
+    if (eventId && eventId > 10) {
+      // Try to find by ID first if we have a valid Supabase ID
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+      
+      if (!error && data) {
+        event = data;
+      } else {
+        eventError = error;
+      }
+    }
+
+    // If not found by ID, try to find by location_name and event_name
+    if (!event && locationName && eventName) {
+      console.log(`Looking up event by location: "${locationName}", event: "${eventName}"`);
+      
+      let query = supabase
+        .from('events')
+        .select('*')
+        .eq('location_name', locationName)
+        .eq('event_name', eventName);
+      
+      // If we have location address, use it as additional filter
+      if (locationAddress) {
+        query = query.eq('location_address', locationAddress);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(1);
+      
+      if (!error && data && data.length > 0) {
+        event = data[0];
+        console.log(`✅ Found event with ID: ${event.id}`);
+      } else {
+        eventError = error || new Error('Event not found by location and name');
+      }
+    }
+
+    // If still not found, try just by location_name (more lenient)
+    if (!event && locationName) {
+      console.log(`Trying to find event by location only: "${locationName}"`);
+      
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('location_name', locationName)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        event = data[0];
+        console.log(`✅ Found event by location only with ID: ${event.id}`);
+      }
+    }
+
+    if (!event) {
+      console.error('❌ Event not found. Searched with:', { eventId, locationName, eventName, locationAddress });
       return NextResponse.json(
-        { success: false, error: 'Event not found' },
+        { success: false, error: 'Event not found. Please try again.' },
         { status: 404 }
       );
     }
@@ -76,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get event name for display_name (use event_name, location_name, or initiator_name as fallback)
-    const eventName = event.event_name || event.location_name || event.initiator_name || 'Event';
+    const displayEventName = event.event_name || event.location_name || event.initiator_name || 'Event';
 
     // Format event details nicely for SMS
     const eventMessage = formatEventMessage(event);
@@ -109,7 +183,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         send_from: seriesSenderNumber,
         chat: {
-          display_name: eventName,
+          display_name: displayEventName,
           phone_numbers: phoneNumbers,
         },
         message: {
