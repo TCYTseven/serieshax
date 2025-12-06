@@ -54,13 +54,15 @@ async function generateMessageResponse(
   messageId: string
 ): Promise<string> {
   console.log(`\n🔮 Processing message from ${phoneNumber}:`);
-  console.log(`   "${messageBody}"`);
+  console.log(`   Message: "${messageBody}"`);
+  console.log(`   Message ID: ${messageId}`);
 
   // Check rate limit
   if (isRateLimited(phoneNumber)) {
-    console.log('   ⚠️ Rate limited');
+    console.log('   ⚠️ Rate limited - returning rate limit message');
     return getRateLimitMessage();
   }
+  console.log('   ✅ Rate limit check passed');
   recordRequest(phoneNumber);
 
   try {
@@ -148,9 +150,17 @@ async function generateMessageResponse(
 
   } catch (error) {
     console.error('   ❌ Error processing message:', error);
+    if (error instanceof Error) {
+      console.error(`      Error message: ${error.message}`);
+      console.error(`      Error stack: ${error.stack}`);
+    }
     return "Oops! Something went wrong on my end. Try again in a bit! 🙏";
   }
 }
+
+// Track sent messages to prevent duplicates
+const sentMessagesCache = new Set<string>();
+const MAX_SENT_CACHE_SIZE = 1000;
 
 /**
  * Handle a reflection message - process reflection and send follow-up questions
@@ -159,9 +169,20 @@ async function generateMessageResponse(
 async function handleReflectionMessage(
   phoneNumber: string,
   reflectionText: string,
-  chatId?: string
+  chatId?: string,
+  messageId?: string,
+  kafkaKey?: string
 ): Promise<void> {
   console.log(`\n💭 Processing reflection from ${phoneNumber}`);
+  
+  // Use Kafka key for deduplication (most reliable)
+  const messageKey = `reflection-${kafkaKey || `${phoneNumber}-${messageId || Date.now()}`}`;
+  
+  // Check if we've already sent a response for this message
+  if (sentMessagesCache.has(messageKey)) {
+    console.log(`   ⚠️ DUPLICATE REFLECTION: Already processed Kafka message ${kafkaKey}, skipping send...`);
+    return;
+  }
   
   try {
     // Get or create user
@@ -173,42 +194,82 @@ async function handleReflectionMessage(
       raw_reflection: reflectionText,
     });
     
-    // Format follow-up questions for SMS (join with newlines, max 2 questions)
-    const followUpText = result.followUpQuestions
-      .slice(0, 2)
-      .join('\n\n');
+    // Format follow-up message (should be a single encouraging message)
+    const followUpText = result.followUpQuestions[0] || "That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect.";
     
-    // Send follow-up questions via SMS
-    console.log(`\n📤 Sending follow-up questions to ${phoneNumber}`);
+    // Send follow-up message via SMS (ONLY ONCE)
+    // CRITICAL: We MUST send a response - retry until successful
+    console.log(`\n📤 Sending reflection invitation to ${phoneNumber}`);
+    console.log(`   Message: "${followUpText}"`);
+    console.log(`   Message Key: ${messageKey}`);
     
-    if (chatId) {
-      const sendResult = await sendMessageToChat(chatId, followUpText);
-      if (sendResult.success) {
-        console.log(`   ✅ Follow-up questions sent to chat ${chatId}`);
+    let sendSuccess = false;
+    const maxRetries = 3;
+    let attempts = 0;
+    
+    while (!sendSuccess && attempts < maxRetries) {
+      attempts++;
+      console.log(`   → Attempt ${attempts}/${maxRetries} to send reflection invitation...`);
+      
+      if (chatId) {
+        const sendResult = await sendMessageToChat(chatId, followUpText);
+        sendSuccess = sendResult.success;
+        if (sendSuccess) {
+          console.log(`   ✅ Reflection invitation sent to chat ${chatId}`);
+          // Mark as sent ONLY after successful send
+          sentMessagesCache.add(messageKey);
+          if (sentMessagesCache.size > MAX_SENT_CACHE_SIZE) {
+            const firstKey = sentMessagesCache.values().next().value;
+            if (firstKey) {
+              sentMessagesCache.delete(firstKey);
+            }
+          }
+          break;
+        } else {
+          console.error(`   ❌ Attempt ${attempts} failed: ${sendResult.error}`);
+          if (attempts < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          }
+        }
       } else {
-        console.error(`   ❌ Failed to send follow-up questions: ${sendResult.error}`);
-      }
-    } else {
-      const sendResult = await createChatAndSendMessage(
-        kafkaConfig.senderNumber,
-        phoneNumber,
-        followUpText
-      );
-      if (sendResult.success) {
-        console.log(`   ✅ Follow-up questions sent via new chat ${sendResult.chatId}`);
-      } else {
-        console.error(`   ❌ Failed to send follow-up questions: ${sendResult.error}`);
+        const sendResult = await createChatAndSendMessage(
+          kafkaConfig.senderNumber,
+          phoneNumber,
+          followUpText
+        );
+        sendSuccess = sendResult.success;
+        if (sendSuccess) {
+          console.log(`   ✅ Reflection invitation sent via new chat ${sendResult.chatId}`);
+          // Mark as sent ONLY after successful send
+          sentMessagesCache.add(messageKey);
+          if (sentMessagesCache.size > MAX_SENT_CACHE_SIZE) {
+            const firstKey = sentMessagesCache.values().next().value;
+            if (firstKey) {
+              sentMessagesCache.delete(firstKey);
+            }
+          }
+          break;
+        } else {
+          console.error(`   ❌ Attempt ${attempts} failed: ${sendResult.error}`);
+          if (attempts < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          }
+        }
       }
     }
     
-    console.log(`   📊 Analysis generated and saved (Reflection ID: ${result.reflection.id})`);
+    if (sendSuccess) {
+      console.log(`   📊 Analysis generated and saved (Reflection ID: ${result.reflection.id})`);
+    } else {
+      console.error(`   ⚠️ CRITICAL: All ${maxRetries} attempts failed for reflection invitation`);
+      // Don't mark as sent so it can retry
+    }
     
   } catch (error) {
     console.error('   ❌ Error processing reflection:', error);
-    // Optionally send an error message to user
-    if (chatId) {
-      await sendMessageToChat(chatId, "Thanks for sharing! I'm processing your reflection...");
-    }
+    // Remove from cache on error so it can be retried
+    sentMessagesCache.delete(messageKey);
+    // DON'T send error message - it could cause duplicate sends
   }
 }
 
@@ -235,66 +296,241 @@ function isReflectionMessage(messageBody: string): boolean {
  * Handle incoming message - process and send response via REST API
  */
 async function handleIncomingMessage(message: ParsedIncomingMessage): Promise<void> {
-  const { from, body, messageId, chatId } = message;
+  const { from, body, messageId, chatId, kafkaPartition, kafkaOffset } = message;
   
-  // Check if this is a reflection message
-  if (isReflectionMessage(body)) {
-    await handleReflectionMessage(from, body, chatId);
-    return;
-  }
+  console.log('\n🔵 ═══════════════════════════════════════════');
+  console.log(`📥 HANDLING INCOMING MESSAGE`);
+  console.log(`   From: ${from}`);
+  console.log(`   Body: "${body}"`);
+  console.log(`   Message ID: ${messageId}`);
+  console.log(`   Chat ID: ${chatId || 'none'}`);
+  console.log(`   Kafka: Partition ${kafkaPartition ?? 'unknown'}, Offset ${kafkaOffset ?? 'unknown'}`);
   
-  // Generate response
-  const response = await generateMessageResponse(from, body, messageId);
-
-  // Show typing indicator while "typing"
-  if (chatId) {
-    await startTypingIndicator(chatId);
-  }
-
-  // Small delay to simulate typing (optional, for UX)
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Stop typing indicator
-  if (chatId) {
-    await stopTypingIndicator(chatId);
-  }
-
-  // Send response via REST API
-  console.log(`\n📤 Sending response to ${from} (chat: ${chatId})`);
+  // CRITICAL: Use Kafka partition-offset for deduplication (guaranteed unique)
+  // Fallback to messageId if Kafka metadata is missing (shouldn't happen, but safety check)
+  const kafkaKey = (kafkaPartition !== undefined && kafkaOffset !== undefined) 
+    ? `${kafkaPartition}-${kafkaOffset}` 
+    : `fallback-${messageId || Date.now()}`;
   
-  if (chatId) {
-    // Use existing chat_id to reply
-    const result = await sendMessageToChat(chatId, response);
-    if (result.success) {
-      console.log(`   ✅ Response sent via REST API to chat ${chatId}`);
+  try {
+    // Check if this is a reflection message
+    const isReflection = isReflectionMessage(body);
+    console.log(`   Is reflection: ${isReflection}`);
+    
+    if (isReflection) {
+      console.log('   → Processing as reflection...');
+      // Check if we've already processed this Kafka message
+      if (sentMessagesCache.has(`reflection-${kafkaKey}`)) {
+        console.log(`   ⚠️ DUPLICATE: Already processed Kafka message ${kafkaKey}, skipping...`);
+        return;
+      }
+      await handleReflectionMessage(from, body, chatId, messageId, kafkaKey);
+      console.log('   ✅ Reflection processing complete');
+      return;
+    }
+    
+    console.log('   → Processing as regular message...');
+    
+    // Check if we've already sent a response for this Kafka message
+    const messageKey = `regular-${kafkaKey}`;
+    if (sentMessagesCache.has(messageKey)) {
+      console.log(`   ⚠️ DUPLICATE: Already processed Kafka message ${kafkaKey}, skipping send...`);
+      return;
+    }
+    
+    // Generate response - ALWAYS generate something, even on error
+    let response: string;
+    try {
+      response = await generateMessageResponse(from, body, messageId);
+      console.log(`   ✅ Generated response: "${response.substring(0, 50)}..."`);
+    } catch (error) {
+      console.error('   ❌ Error generating response:', error);
+      if (error instanceof Error) {
+        console.error(`      Error details: ${error.message}`);
+      }
+      // ALWAYS have a fallback response
+      response = "Hey! I'm here but having a bit of trouble processing that. Can you try again?";
+      console.log(`   ✅ Using fallback response: "${response}"`);
+    }
+
+    // Show typing indicator while "typing"
+    console.log('   → Starting typing indicator...');
+    if (chatId) {
+      try {
+        await startTypingIndicator(chatId);
+        console.log('   ✅ Typing indicator started');
+      } catch (error) {
+        console.log('   ⚠️ Could not start typing indicator:', error);
+      }
     } else {
-      console.error(`   ❌ Failed to send response: ${result.error}`);
-      
-      // Fallback: try creating a new chat
-      console.log('   🔄 Trying fallback: create new chat...');
-      const fallbackResult = await createChatAndSendMessage(
-        kafkaConfig.senderNumber,
-        from,
-        response
-      );
-      if (fallbackResult.success) {
-        console.log(`   ✅ Response sent via new chat ${fallbackResult.chatId}`);
-      } else {
-        console.error(`   ❌ Fallback also failed: ${fallbackResult.error}`);
+      console.log('   ⚠️ No chatId, skipping typing indicator');
+    }
+
+    // Small delay to simulate typing (optional, for UX)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Stop typing indicator
+    if (chatId) {
+      try {
+        await stopTypingIndicator(chatId);
+        console.log('   ✅ Typing indicator stopped');
+      } catch (error) {
+        console.log('   ⚠️ Could not stop typing indicator:', error);
       }
     }
-  } else {
-    // No chat_id, create new chat
-    const result = await createChatAndSendMessage(
-      kafkaConfig.senderNumber,
-      from,
-      response
-    );
-    if (result.success) {
-      console.log(`   ✅ Response sent via new chat ${result.chatId}`);
-    } else {
-      console.error(`   ❌ Failed to send response: ${result.error}`);
+
+    // Send response via REST API (ALWAYS send, even if there were errors)
+    console.log(`\n📤 Sending response to ${from} (chat: ${chatId || 'new chat'})`);
+    console.log(`   Message Key: ${messageKey}`);
+    
+    // Send response - mark as sent ONLY after successful send
+    // CRITICAL: We MUST send a response - retry until successful
+    let sendSuccess = false;
+    const maxRetries = 3;
+    let attempts = 0;
+    
+    while (!sendSuccess && attempts < maxRetries) {
+      attempts++;
+      console.log(`   → Attempt ${attempts}/${maxRetries} to send response...`);
+      
+      if (chatId) {
+        // Use existing chat_id to reply
+        console.log(`   → Sending to existing chat ${chatId}...`);
+        try {
+          const result = await sendMessageToChat(chatId, response);
+          sendSuccess = result.success;
+          if (sendSuccess) {
+            console.log(`   ✅ Response sent via REST API to chat ${chatId}`);
+            console.log(`   📨 Message ID: ${result.messageId || 'unknown'}`);
+            // Mark as sent ONLY after successful send
+            sentMessagesCache.add(messageKey);
+            if (sentMessagesCache.size > MAX_SENT_CACHE_SIZE) {
+              const firstKey = sentMessagesCache.values().next().value;
+              if (firstKey) {
+                sentMessagesCache.delete(firstKey);
+              }
+            }
+            break; // Success, exit retry loop
+          } else {
+            console.error(`   ❌ Attempt ${attempts} failed: ${result.error}`);
+            if (attempts < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+            }
+          }
+        } catch (error) {
+          console.error(`   ❌ Exception on attempt ${attempts}:`, error);
+          if (attempts < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          }
+        }
+      }
+      
+      // Fallback: try creating a new chat if existing chat failed
+      if (!sendSuccess && attempts < maxRetries) {
+        console.log('   🔄 Trying fallback: create new chat...');
+        try {
+          const fallbackResult = await createChatAndSendMessage(
+            kafkaConfig.senderNumber,
+            from,
+            response
+          );
+          sendSuccess = fallbackResult.success;
+          if (sendSuccess) {
+            console.log(`   ✅ Response sent via new chat ${fallbackResult.chatId}`);
+            // Mark as sent ONLY after successful send
+            sentMessagesCache.add(messageKey);
+            if (sentMessagesCache.size > MAX_SENT_CACHE_SIZE) {
+              const firstKey = sentMessagesCache.values().next().value;
+              if (firstKey) {
+                sentMessagesCache.delete(firstKey);
+              }
+            }
+            break; // Success, exit retry loop
+          } else {
+            console.error(`   ❌ Fallback attempt ${attempts} failed: ${fallbackResult.error}`);
+            if (attempts < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            }
+          }
+        } catch (error) {
+          console.error(`   ❌ Exception in fallback attempt ${attempts}:`, error);
+          if (attempts < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          }
+        }
+      }
     }
+    
+    // If all retries failed, we MUST still send something
+    if (!sendSuccess) {
+      console.error(`   ⚠️ CRITICAL: All ${maxRetries} attempts failed! Trying emergency send...`);
+      // Emergency fallback - try one more time with a simpler message
+      try {
+        const emergencyResponse = "Hey! Got your message. Let me get back to you in a sec!";
+        const emergencyResult = chatId 
+          ? await sendMessageToChat(chatId, emergencyResponse)
+          : await createChatAndSendMessage(kafkaConfig.senderNumber, from, emergencyResponse);
+        
+        if (emergencyResult.success) {
+          console.log(`   ✅ Emergency response sent`);
+          sentMessagesCache.add(messageKey);
+        } else {
+          console.error(`   ❌ EMERGENCY SEND ALSO FAILED - USER WILL NOT RECEIVE RESPONSE`);
+          // Don't mark as sent so it can retry on next Kafka delivery
+        }
+      } catch (emergencyError) {
+        console.error(`   ❌ EMERGENCY SEND EXCEPTION:`, emergencyError);
+        // Don't mark as sent - let Kafka redeliver
+      }
+    }
+    
+    console.log('═══════════════════════════════════════════\n');
+  } catch (error) {
+    console.error('\n❌ ═══════════════════════════════════════════');
+    console.error('❌ ERROR IN handleIncomingMessage:');
+    console.error(`   From: ${from}`);
+    console.error(`   Body: "${body}"`);
+    console.error(`   Message ID: ${messageId}`);
+    console.error(`   Error:`, error);
+    if (error instanceof Error) {
+      console.error(`   Message: ${error.message}`);
+      console.error(`   Stack: ${error.stack}`);
+    }
+    console.error('═══════════════════════════════════════════\n');
+    
+    // CRITICAL: Always send SOMETHING to the user, even on error
+    // Use Kafka key for deduplication
+    const errorMessageKey = `error-${kafkaKey}`;
+    if (!sentMessagesCache.has(errorMessageKey)) {
+      try {
+        const errorResponse = "Hey! I'm here but ran into a small issue. Can you try sending that again?";
+        let errorSendSuccess = false;
+        
+        if (chatId) {
+          const result = await sendMessageToChat(chatId, errorResponse);
+          errorSendSuccess = result.success;
+        } else {
+          const result = await createChatAndSendMessage(
+            kafkaConfig.senderNumber,
+            from,
+            errorResponse
+          );
+          errorSendSuccess = result.success;
+        }
+        
+        if (errorSendSuccess) {
+          sentMessagesCache.add(errorMessageKey);
+          console.log(`   ✅ Sent error recovery message to user`);
+        } else {
+          console.error('   ⚠️ Failed to send error recovery message');
+        }
+      } catch (sendError) {
+        console.error('   ⚠️ Exception sending error recovery message:', sendError);
+      }
+    }
+    
+    // Don't rethrow - let Kafka commit the offset and continue
+    // The error has been logged and we've attempted to notify user
   }
 }
 

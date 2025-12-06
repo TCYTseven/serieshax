@@ -118,6 +118,9 @@ export interface ParsedIncomingMessage {
   chatId: string;  // Important for sending replies via REST API
   service: string;
   rawMessage: SeriesIncomingMessage | IncomingMessage;
+  // Kafka metadata for reliable deduplication (added by consumer after parsing)
+  kafkaPartition?: number;
+  kafkaOffset?: string;
 }
 
 /**

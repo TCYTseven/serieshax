@@ -24,22 +24,23 @@ function getOpenAI(): OpenAI {
 /**
  * System prompt for generating meaningful follow-up questions
  */
-const FOLLOW_UP_PROMPT = `You are a thoughtful conversational AI that helps people reflect on their experiences. 
-Your goal is to generate 1-2 meaningful, subtle follow-up questions that will help the user dive deeper into their reflection.
+const FOLLOW_UP_PROMPT = `You are a warm, supportive friend helping someone reflect on their experiences. 
+The user said they want to reflect, so respond with an encouraging message that invites them to share.
 
 Guidelines:
-- Ask questions that provoke deeper thinking, not just surface-level responses
-- Be subtle and natural - don't sound like a therapist or interviewer
-- Focus on understanding emotions, motivations, or insights
-- Keep questions concise (under 100 characters each)
-- Make questions feel like a curious friend, not an interrogation
-- Return ONLY the questions, one per line, no numbering or bullets
+- Be warm, friendly, and encouraging
+- Acknowledge their desire to reflect positively
+- Invite them to share their experience naturally
+- Keep it concise (under 150 characters total)
+- Sound like a caring friend, not a therapist
+- Return ONLY the response message, no questions marks or formatting
 
-Example format:
-What made that moment stand out to you?
-How did that make you feel?
+Example responses:
+"That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect."
+"I'd love to hear about it! Share what happened and how you're feeling."
+"Absolutely! Walk me through what happened - I'm here to listen."
 
-Generate 1-2 follow-up questions based on this reflection:`;
+Generate an encouraging response to invite them to share their reflection:`;
 
 /**
  * System prompt for analyzing reflections
@@ -64,10 +65,9 @@ async function generateFollowUpQuestions(
   rawReflection: string
 ): Promise<string[]> {
   if (!env.OPENAI_API_KEY) {
-    // Fallback: return generic questions
+    // Fallback: return encouraging message
     return [
-      "What made that experience meaningful to you?",
-      "How did that make you feel?"
+      "That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect."
     ];
   }
 
@@ -84,32 +84,27 @@ async function generateFollowUpQuestions(
       temperature: 0.8,
     });
 
-    const response = completion.choices[0]?.message?.content;
+    const response = completion.choices[0]?.message?.content?.trim();
     
     if (!response) {
       return [
-        "What made that experience meaningful to you?",
-        "How did that make you feel?"
+        "That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect."
       ];
     }
 
-    // Parse questions (split by newlines, filter empty)
-    const questions = response
-      .split('\n')
-      .map(q => q.trim())
-      .filter(q => q.length > 0 && !q.match(/^\d+[\.\)]/)) // Remove numbering
-      .slice(0, 2); // Max 2 questions
+    // Return as single message (not multiple questions)
+    // Clean up the response - remove quotes, extra formatting
+    const cleanResponse = response
+      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+      .replace(/\n+/g, ' ') // Replace newlines with spaces
+      .trim();
 
-    return questions.length > 0 ? questions : [
-      "What made that experience meaningful to you?",
-      "How did that make you feel?"
-    ];
+    return [cleanResponse || "That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect."];
 
   } catch (error) {
     console.error('Error generating follow-up questions:', error);
     return [
-      "What made that experience meaningful to you?",
-      "How did that make you feel?"
+      "That sounds great! Tell me how your night went, and I'll be sure to listen and help you reflect."
     ];
   }
 }
