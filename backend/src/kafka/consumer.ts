@@ -2,8 +2,10 @@ import { Consumer, EachMessagePayload } from 'kafkajs';
 import { kafka, kafkaConfig } from '../config/kafka';
 import { 
   KafkaMessagePayload, 
-  isIncomingMessage, 
+  isIncomingMessage,
+  isSeriesV2Message,
   parseIncomingMessage,
+  parseSeriesV2Message,
   ParsedIncomingMessage 
 } from './types';
 
@@ -21,8 +23,12 @@ class SeriesConsumer {
   private messageHandler: MessageHandler | null = null;
 
   constructor() {
+    // Use a unique consumer group to avoid partition conflicts with other consumers
+    const uniqueGroupId = `${kafkaConfig.consumerGroup}-${Date.now()}`;
+    console.log(`📡 Using consumer group: ${uniqueGroupId}`);
+    
     this.consumer = kafka.consumer({ 
-      groupId: kafkaConfig.consumerGroup,
+      groupId: uniqueGroupId,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
     });
@@ -52,9 +58,9 @@ class SeriesConsumer {
       console.log(`📥 Subscribing to topic: ${kafkaConfig.topic}`);
       await this.consumer.subscribe({ 
         topic: kafkaConfig.topic, 
-        fromBeginning: false 
+        fromBeginning: true  // Get all messages including old ones for testing
       });
-      console.log('✅ Subscribed to topic');
+      console.log('✅ Subscribed to topic (fromBeginning: true)');
 
       this.isRunning = true;
 
@@ -93,15 +99,36 @@ class SeriesConsumer {
 
     try {
       const rawValue = message.value.toString();
-      console.log(`   Raw value: ${rawValue}`);
+      console.log(`   Raw value length: ${rawValue.length} chars`);
 
       const parsedMessage: KafkaMessagePayload = JSON.parse(rawValue);
-      console.log(`   Event type: ${parsedMessage.event}`);
+      const eventType = parsedMessage.event_type || parsedMessage.event || 'unknown';
+      console.log(`   Event type: ${eventType}`);
 
-      if (isIncomingMessage(parsedMessage)) {
+      // Handle Series v2 format (message.received)
+      if (isSeriesV2Message(parsedMessage)) {
+        const parsed = parseSeriesV2Message(parsedMessage);
+        
+        console.log('📱 SMS Details (Series v2):');
+        console.log(`   From: ${parsed.from}`);
+        console.log(`   To: ${parsed.to}`);
+        console.log(`   Body: "${parsed.body}"`);
+        console.log(`   Service: ${parsed.service}`);
+        console.log(`   Message ID: ${parsed.messageId}`);
+        console.log('═══════════════════════════════════════════\n');
+
+        // Call custom handler if set
+        if (this.messageHandler) {
+          await this.messageHandler(parsed);
+        } else {
+          console.log('⚠️ No message handler set!');
+        }
+      }
+      // Handle legacy format (message_received)
+      else if (isIncomingMessage(parsedMessage)) {
         const parsed = parseIncomingMessage(parsedMessage);
         
-        console.log('📱 SMS Details:');
+        console.log('📱 SMS Details (Legacy):');
         console.log(`   From: ${parsed.from}`);
         console.log(`   To: ${parsed.to}`);
         console.log(`   Body: "${parsed.body}"`);
@@ -111,14 +138,17 @@ class SeriesConsumer {
         // Call custom handler if set
         if (this.messageHandler) {
           await this.messageHandler(parsed);
+        } else {
+          console.log('⚠️ No message handler set!');
         }
-      } else {
-        console.log(`ℹ️ Non-SMS event received: ${parsedMessage.event}`);
-        console.log(`   Data: ${JSON.stringify(parsedMessage.data, null, 2)}`);
+      } 
+      else {
+        console.log(`ℹ️ Non-SMS event received: ${eventType}`);
+        console.log(`   Data keys: ${Object.keys(parsedMessage.data || {}).join(', ')}`);
       }
     } catch (error) {
       console.error('❌ Error processing message:', error);
-      console.error('   Raw message:', message.value?.toString());
+      console.error('   Raw message:', message.value?.toString().substring(0, 200));
     }
   }
 

@@ -120,9 +120,23 @@ This server does not host this topic-partition
 ```
 **Solution:** Verify your `KAFKA_TOPIC` is correct and matches your team's assigned topic.
 
-## 📝 Next Steps (Phase 3.2)
+## 📝 Phase 3.2 - ✅ Completed
 
-- [ ] Implement message processing logic
-- [ ] Add Supabase integration for user data
-- [ ] Connect OpenAI for intelligent responses
-- [ ] Add rate limiting and error handling
+- [x] Implement message processing logic
+- [x] Add Supabase integration for user data
+- [x] Connect OpenAI for intelligent responses
+- [x] Add rate limiting and error handling
+
+### New Services Added
+- `oracleService.ts` - AI-powered conversation handler using OpenAI GPT-4o-mini
+- `rateLimiter.ts` - In-memory rate limiting (10 msgs/min, 5s cooldown)
+
+### Environment Variables Needed
+```env
+# Required for AI responses
+OPENAI_API_KEY=sk-...
+
+# Required for user data persistence
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```

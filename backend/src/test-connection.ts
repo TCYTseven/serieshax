@@ -7,19 +7,23 @@ dotenv.config();
 
 import { Kafka } from 'kafkajs';
 
-// Kafka Configuration
-// ⚠️ UPDATE THESE CREDENTIALS FROM YOUR SERIES DASHBOARD!
-const KAFKA_USERNAME = process.env.KAFKA_SASL_USERNAME || 'YOUR_USERNAME_HERE';
-const KAFKA_PASSWORD = process.env.KAFKA_SASL_PASSWORD || 'YOUR_PASSWORD_HERE';
+// Kafka Configuration from environment
+const KAFKA_USERNAME = process.env.KAFKA_SASL_USERNAME!;
+const KAFKA_PASSWORD = process.env.KAFKA_SASL_PASSWORD!;
+const KAFKA_BROKERS = process.env.KAFKA_BOOTSTRAP_SERVERS!;
+const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID!;
+const KAFKA_TOPIC = process.env.KAFKA_TOPIC!;
+const KAFKA_CONSUMER_GROUP = process.env.KAFKA_CONSUMER_GROUP!;
 
 console.log('🔑 Using credentials:');
 console.log('   Username:', KAFKA_USERNAME);
 console.log('   Password:', KAFKA_PASSWORD.substring(0, 10) + '...');
+console.log('   Brokers:', KAFKA_BROKERS);
 console.log('');
 
 const kafka = new Kafka({
-  clientId: 'team-client-ea5cc23f325342af8ce44698138ec42d',
-  brokers: ['pkc-619z3.us-east1.gcp.confluent.cloud:9092'],
+  clientId: KAFKA_CLIENT_ID,
+  brokers: [KAFKA_BROKERS],
   ssl: true,
   sasl: {
     mechanism: 'plain',
@@ -29,7 +33,7 @@ const kafka = new Kafka({
 });
 
 const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: 'team-cg-ea5cc23f325342af8ce44698138ec42d' });
+const consumer = kafka.consumer({ groupId: KAFKA_CONSUMER_GROUP });
 
 async function testConnection() {
   console.log('🔌 Testing Kafka connection...\n');
@@ -50,7 +54,7 @@ async function testConnection() {
 
     console.log('📤 Sending test message...');
     const result = await producer.send({
-      topic: 'team.team.ea5cc23f325342af8ce44698138ec42d',
+      topic: KAFKA_TOPIC,
       messages: [
         {
           value: JSON.stringify(message)
@@ -74,7 +78,7 @@ async function testConnection() {
 
     console.log('📥 Subscribing to topic...');
     await consumer.subscribe({ 
-      topic: 'team.team.ea5cc23f325342af8ce44698138ec42d', 
+      topic: KAFKA_TOPIC, 
       fromBeginning: false 
     });
     console.log('✅ Subscribed to topic!\n');
