@@ -1,6 +1,7 @@
 # Social Oracle
 
 Social Oracle is the agentic layer that transforms how people socialize by driving social discovery through the city's hidden gems.
+
 **Demo Video**: https://youtu.be/daIanfRRzvQ
 
 ## 🚀 Quick Start
